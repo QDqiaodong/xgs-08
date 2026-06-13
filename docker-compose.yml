@@ -1,0 +1,85 @@
+services:
+  mysql:
+    image: ${DOCKER_REGISTRY}library/mysql:8.0
+    container_name: ${COMPOSE_PROJECT_NAME}-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "127.0.0.1:${MYSQL_PORT}:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./db/init:/docker-entrypoint-initdb.d
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    networks:
+      - bonsai-network
+
+  redis:
+    image: ${DOCKER_REGISTRY}library/redis:7-alpine
+    container_name: ${COMPOSE_PROJECT_NAME}-redis
+    restart: always
+    ports:
+      - "127.0.0.1:${REDIS_PORT}:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - bonsai-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY}
+    container_name: ${COMPOSE_PROJECT_NAME}-backend
+    restart: always
+    depends_on:
+      - mysql
+      - redis
+    ports:
+      - "127.0.0.1:${BACKEND_PORT}:9036"
+    volumes:
+      - ./backend/uploads:/app/uploads
+    environment:
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      SPRING_DATA_REDIS_HOST: ${SPRING_DATA_REDIS_HOST}
+      SPRING_DATA_REDIS_PORT: ${SPRING_DATA_REDIS_PORT}
+      SERVER_PORT: ${SERVER_PORT}
+      BONSAI_UPLOAD_PATH: ${BONSAI_UPLOAD_PATH}
+      BONSAI_URL_PREFIX: ${BONSAI_URL_PREFIX}
+    networks:
+      - bonsai-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY}
+    container_name: ${COMPOSE_PROJECT_NAME}-frontend
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT}:80"
+    volumes:
+      - ./frontend/nginx.conf:/etc/nginx/nginx.conf
+    networks:
+      - bonsai-network
+
+volumes:
+  mysql-data:
+    name: ${COMPOSE_PROJECT_NAME}-mysql-data
+  redis-data:
+    name: ${COMPOSE_PROJECT_NAME}-redis-data
+
+networks:
+  bonsai-network:
+    name: ${COMPOSE_PROJECT_NAME}-network
+    driver: bridge
