@@ -98,6 +98,14 @@
         </div>
       </div>
     </div>
+
+    <van-tabbar v-model:active="activeFooter" route fixed placeholder>
+      <van-tabbar-item to="/" icon="home-o">首页</van-tabbar-item>
+      <van-tabbar-item to="/bonsais" icon="flower-o">盆景</van-tabbar-item>
+      <van-tabbar-item to="/publish" icon="plus">发布</van-tabbar-item>
+      <van-tabbar-item to="/care-logs" icon="notes-o">养护</van-tabbar-item>
+      <van-tabbar-item to="/profile" icon="user-o">我的</van-tabbar-item>
+    </van-tabbar>
   </div>
 </template>
 
@@ -111,6 +119,7 @@ import { getEventsByBonsaiId, deleteEvent as deleteEventApi } from '@/api/lifecy
 const router = useRouter()
 const route = useRoute()
 
+const activeFooter = ref(1)
 const loading = ref(false)
 const bonsai = ref(null)
 const events = ref([])

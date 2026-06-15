@@ -3,6 +3,7 @@ package com.bonsai.controller;
 import com.bonsai.dto.Result;
 import com.bonsai.entity.CareLog;
 import com.bonsai.service.CareLogService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
@@ -30,7 +31,7 @@ public class CareLogController {
     }
 
     @PostMapping
-    public Result<CareLog> createCareLog(@RequestBody CareLog careLog) {
+    public Result<CareLog> createCareLog(@Valid @RequestBody CareLog careLog) {
         return Result.success(careLogService.createCareLog(careLog));
     }
 }

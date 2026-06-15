@@ -3,6 +3,7 @@ package com.bonsai.controller;
 import com.bonsai.dto.Result;
 import com.bonsai.entity.LifecycleEvent;
 import com.bonsai.service.LifecycleEventService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,12 +27,12 @@ public class LifecycleEventController {
     }
 
     @PostMapping
-    public Result<LifecycleEvent> createEvent(@RequestBody LifecycleEvent event) {
+    public Result<LifecycleEvent> createEvent(@Valid @RequestBody LifecycleEvent event) {
         return Result.success(lifecycleEventService.createEvent(event));
     }
 
     @PutMapping
-    public Result<LifecycleEvent> updateEvent(@RequestBody LifecycleEvent event) {
+    public Result<LifecycleEvent> updateEvent(@Valid @RequestBody LifecycleEvent event) {
         return Result.success(lifecycleEventService.updateEvent(event));
     }
 

@@ -9,10 +9,15 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class CareLogService {
+
+    private static final Set<String> VALID_LOG_TYPES = Set.of(
+            "water", "fertilize", "prune", "repot", "other"
+    );
 
     private final CareLogRepository careLogRepository;
 
@@ -26,6 +31,15 @@ public class CareLogService {
     }
 
     public CareLog createCareLog(CareLog careLog) {
+        validateLogType(careLog.getLogType());
         return careLogRepository.save(careLog);
+    }
+
+    private void validateLogType(String logType) {
+        if (logType == null || !VALID_LOG_TYPES.contains(logType)) {
+            throw new IllegalArgumentException(
+                    "无效的养护类型: " + logType + "。允许的类型: " + String.join(", ", VALID_LOG_TYPES)
+            );
+        }
     }
 }

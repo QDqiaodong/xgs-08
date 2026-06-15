@@ -3,6 +3,7 @@ package com.bonsai.controller;
 import com.bonsai.dto.Result;
 import com.bonsai.entity.Bonsai;
 import com.bonsai.service.BonsaiService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
@@ -36,12 +37,12 @@ public class BonsaiController {
     }
 
     @PostMapping
-    public Result<Bonsai> createBonsai(@RequestBody Bonsai bonsai) {
+    public Result<Bonsai> createBonsai(@Valid @RequestBody Bonsai bonsai) {
         return Result.success(bonsaiService.createBonsai(bonsai));
     }
 
     @PutMapping
-    public Result<Bonsai> updateBonsai(@RequestBody Bonsai bonsai) {
+    public Result<Bonsai> updateBonsai(@Valid @RequestBody Bonsai bonsai) {
         return Result.success(bonsaiService.updateBonsai(bonsai));
     }
 

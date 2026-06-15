@@ -10,6 +10,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -33,10 +34,12 @@ public class BonsaiService {
     }
 
     public Bonsai createBonsai(Bonsai bonsai) {
+        validateBonsai(bonsai);
         return bonsaiRepository.save(bonsai);
     }
 
     public Bonsai updateBonsai(Bonsai bonsai) {
+        validateBonsai(bonsai);
         return bonsaiRepository.save(bonsai);
     }
 
@@ -53,5 +56,26 @@ public class BonsaiService {
             return bonsaiRepository.save(bonsai);
         }
         return null;
+    }
+
+    private void validateBonsai(Bonsai bonsai) {
+        if (bonsai.getUserId() == null || bonsai.getUserId() <= 0) {
+            throw new IllegalArgumentException("无效的用户ID");
+        }
+        if (bonsai.getName() == null || bonsai.getName().trim().isEmpty()) {
+            throw new IllegalArgumentException("盆景名称不能为空");
+        }
+        if (bonsai.getTreeAge() != null && bonsai.getTreeAge() < 0) {
+            throw new IllegalArgumentException("树龄不能为负数");
+        }
+        if (bonsai.getAcquireDate() != null && bonsai.getAcquireDate().isAfter(LocalDate.now())) {
+            throw new IllegalArgumentException("入手日期不能是未来日期");
+        }
+        if (bonsai.getViewCount() == null) {
+            bonsai.setViewCount(0);
+        }
+        if (bonsai.getViewCount() < 0) {
+            throw new IllegalArgumentException("浏览次数不能为负数");
+        }
     }
 }
