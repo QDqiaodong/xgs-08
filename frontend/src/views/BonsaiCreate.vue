@@ -16,7 +16,7 @@
           />
 
           <van-field
-            v-model="form.speciesId"
+            :value="selectedSpeciesName"
             name="speciesId"
             label="树种"
             placeholder="请选择树种"

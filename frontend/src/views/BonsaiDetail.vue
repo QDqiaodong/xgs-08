@@ -82,7 +82,7 @@
                     :key="imgIndex"
                     :src="img"
                     class="event-image"
-                    @click="previewImage(imgIndex)"
+                    @click="previewImage(index, imgIndex)"
                   />
                 </div>
                 <div class="event-actions">
@@ -174,22 +174,20 @@ const getEventTagType = (type) => {
   return found ? found.tagType : 'default'
 }
 
-const previewImage = (index) => {
+const previewImage = (eventIndex, imgIndex) => {
   const allImages = []
-  events.value.forEach(event => {
-    const imgs = parseImages(event.images)
-    allImages.push(...imgs)
-  })
-  let startIndex = 0
+  let startPosition = 0
   for (let i = 0; i < events.value.length; i++) {
     const imgs = parseImages(events.value[i].images)
-    if (i < events.value.findIndex((_, idx) => idx === events.value.findIndex(e => parseImages(e.images).length > index))) {
-      startIndex += imgs.length
+    if (i < eventIndex) {
+      startPosition += imgs.length
     }
+    allImages.push(...imgs)
   }
+  startPosition += imgIndex
   showImagePreview({
     images: allImages,
-    startPosition: startIndex + index
+    startPosition: startPosition
   })
 }
 
