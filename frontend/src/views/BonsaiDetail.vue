@@ -41,6 +41,43 @@
         <p class="description-text">{{ bonsai.description }}</p>
       </div>
 
+      <div v-if="hasOutlineData" class="outline-section card">
+        <div class="section-title">
+          <van-icon name="eye-o" />
+          <span>树形轮廓观察卡</span>
+        </div>
+        <div class="outline-grid">
+          <div class="outline-item" :class="{ empty: !bonsai.trunkShape }">
+            <div class="outline-icon-wrapper outline-icon-trunk">
+              <van-icon name="underway-o" />
+            </div>
+            <div class="outline-label">干型</div>
+            <div class="outline-value">{{ bonsai.trunkShape || '暂无记录' }}</div>
+          </div>
+          <div class="outline-item" :class="{ empty: !bonsai.branchSupport }">
+            <div class="outline-icon-wrapper outline-icon-branch">
+              <van-icon name="share-o" />
+            </div>
+            <div class="outline-label">枝托</div>
+            <div class="outline-value">{{ bonsai.branchSupport || '暂无记录' }}</div>
+          </div>
+          <div class="outline-item" :class="{ empty: !bonsai.crownWidth }">
+            <div class="outline-icon-wrapper outline-icon-crown">
+              <van-icon name="arrow-up" />
+            </div>
+            <div class="outline-label">冠幅</div>
+            <div class="outline-value">{{ bonsai.crownWidth || '暂无记录' }}</div>
+          </div>
+          <div class="outline-item" :class="{ empty: !bonsai.potSurface }">
+            <div class="outline-icon-wrapper outline-icon-pot">
+              <van-icon name="wap-home-o" />
+            </div>
+            <div class="outline-label">盆面</div>
+            <div class="outline-value">{{ bonsai.potSurface || '暂无记录' }}</div>
+          </div>
+        </div>
+      </div>
+
       <div class="timeline-section card">
         <div class="timeline-header">
           <div class="section-title">生命周期时间线</div>
@@ -111,7 +148,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { showToast, showConfirmDialog, showImagePreview } from 'vant'
 import { getBonsaiById, deleteBonsai } from '@/api/bonsai'
@@ -142,6 +179,11 @@ const eventTypes = [
   { text: '换盆', value: 'repotting', icon: 'description', color: '#ee0a24', tagType: 'danger' },
   { text: '其他', value: 'other', icon: 'more-o', color: '#969799', tagType: 'default' }
 ]
+
+const hasOutlineData = computed(() => {
+  if (!bonsai.value) return false
+  return !!(bonsai.value.trunkShape || bonsai.value.branchSupport || bonsai.value.crownWidth || bonsai.value.potSurface)
+})
 
 const formatDate = (date) => {
   if (!date) return ''
@@ -495,5 +537,94 @@ onMounted(() => {
 .event-actions {
   display: flex;
   justify-content: flex-end;
+}
+
+.outline-section {
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
+}
+
+.outline-section .section-title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-lg);
+  padding-left: var(--spacing-sm);
+  border-left: 3px solid var(--color-primary);
+}
+
+.outline-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-md);
+}
+
+.outline-item {
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  transition: all var(--transition-base);
+}
+
+.outline-item.empty {
+  background: var(--color-bg-secondary);
+  opacity: 0.6;
+}
+
+.outline-icon-wrapper {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--spacing-sm);
+  font-size: 22px;
+}
+
+.outline-icon-trunk {
+  background: linear-gradient(135deg, #8B5A2B 0%, #A0522D 100%);
+  color: #fff;
+}
+
+.outline-icon-branch {
+  background: linear-gradient(135deg, #2E8B57 0%, #3CB371 100%);
+  color: #fff;
+}
+
+.outline-icon-crown {
+  background: linear-gradient(135deg, #1E90FF 0%, #4169E1 100%);
+  color: #fff;
+}
+
+.outline-icon-pot {
+  background: linear-gradient(135deg, #CD853F 0%, #D2691E 100%);
+  color: #fff;
+}
+
+.outline-label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-xs);
+}
+
+.outline-value {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-base);
+}
+
+@media (max-width: 360px) {
+  .outline-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

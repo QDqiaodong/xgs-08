@@ -60,6 +60,43 @@
           />
         </van-cell-group>
 
+        <div class="outline-section">
+          <div class="section-title">
+            <van-icon name="eye-o" />
+            <span>树形轮廓</span>
+          </div>
+          <van-cell-group inset>
+            <van-field
+              v-model="form.trunkShape"
+              name="trunkShape"
+              label="干型"
+              placeholder="如：直干、斜干、曲干等"
+              maxlength="200"
+            />
+            <van-field
+              v-model="form.branchSupport"
+              name="branchSupport"
+              label="枝托"
+              placeholder="如：第一托出枝位置、枝片分布等"
+              maxlength="200"
+            />
+            <van-field
+              v-model="form.crownWidth"
+              name="crownWidth"
+              label="冠幅"
+              placeholder="如：树冠宽度、高度比例等"
+              maxlength="200"
+            />
+            <van-field
+              v-model="form.potSurface"
+              name="potSurface"
+              label="盆面"
+              placeholder="如：盆面布局、点缀植物、铺面石等"
+              maxlength="200"
+            />
+          </van-cell-group>
+        </div>
+
         <div class="upload-section">
           <div class="section-title">封面图片</div>
           <van-uploader
@@ -108,7 +145,11 @@ const form = reactive({
   potType: '',
   acquireDate: new Date().toISOString().split('T')[0],
   description: '',
-  coverImage: ''
+  coverImage: '',
+  trunkShape: '',
+  branchSupport: '',
+  crownWidth: '',
+  potSurface: ''
 })
 
 const fileList = ref([])
@@ -209,5 +250,21 @@ onMounted(() => {
   color: #969799;
   margin-bottom: 12px;
   font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.outline-section {
+  margin: 16px;
+}
+
+.outline-section .section-title {
+  color: #323233;
+  font-size: 16px;
+  font-weight: 600;
+  padding-left: 8px;
+  border-left: 3px solid #07c160;
+  margin-bottom: 12px;
 }
 </style>

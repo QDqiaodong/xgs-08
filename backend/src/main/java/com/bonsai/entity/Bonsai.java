@@ -59,6 +59,22 @@ public class Bonsai {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    @Size(max = 200, message = "干型描述长度不能超过200个字符")
+    @Column(name = "trunk_shape", length = 200)
+    private String trunkShape;
+
+    @Size(max = 200, message = "枝托描述长度不能超过200个字符")
+    @Column(name = "branch_support", length = 200)
+    private String branchSupport;
+
+    @Size(max = 200, message = "冠幅描述长度不能超过200个字符")
+    @Column(name = "crown_width", length = 200)
+    private String crownWidth;
+
+    @Size(max = 200, message = "盆面描述长度不能超过200个字符")
+    @Column(name = "pot_surface", length = 200)
+    private String potSurface;
+
     @Min(value = 0, message = "浏览次数不能为负数")
     @Column(name = "view_count")
     private Integer viewCount = 0;
