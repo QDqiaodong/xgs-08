@@ -26,6 +26,26 @@ const routes = [
     name: 'Profile',
     component: () => import('@/views/Profile.vue'),
   },
+  {
+    path: '/bonsais',
+    name: 'BonsaiList',
+    component: () => import('@/views/BonsaiList.vue'),
+  },
+  {
+    path: '/bonsais/:id',
+    name: 'BonsaiDetail',
+    component: () => import('@/views/BonsaiDetail.vue'),
+  },
+  {
+    path: '/bonsais/create',
+    name: 'BonsaiCreate',
+    component: () => import('@/views/BonsaiCreate.vue'),
+  },
+  {
+    path: '/bonsais/:id/events/create',
+    name: 'EventCreate',
+    component: () => import('@/views/EventCreate.vue'),
+  },
 ]
 
 const router = createRouter({

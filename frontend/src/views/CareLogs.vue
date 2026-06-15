@@ -51,8 +51,9 @@
 
     <van-tabbar v-model:active="activeFooter" route fixed placeholder>
       <van-tabbar-item to="/" icon="home-o">首页</van-tabbar-item>
-      <van-tabbar-item to="/care-logs" icon="notes-o">养护</van-tabbar-item>
+      <van-tabbar-item to="/bonsais" icon="flower-o">盆景</van-tabbar-item>
       <van-tabbar-item to="/publish" icon="plus">发布</van-tabbar-item>
+      <van-tabbar-item to="/care-logs" icon="notes-o">养护</van-tabbar-item>
       <van-tabbar-item to="/profile" icon="user-o">我的</van-tabbar-item>
     </van-tabbar>
 
@@ -107,7 +108,7 @@ import { useUserStore } from '@/stores/user'
 const userStore = useUserStore()
 
 const activeTab = ref(0)
-const activeFooter = ref(1)
+const activeFooter = ref(3)
 const loading = ref(false)
 const careLogs = ref([])
 const showAddDialog = ref(false)
