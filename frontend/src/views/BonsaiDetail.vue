@@ -1,5 +1,5 @@
 <template>
-  <div class="bonsai-detail-page">
+  <div class="bonsai-detail-page page-container">
     <van-nav-bar title="盆景详情" left-arrow @click-left="goBack" fixed placeholder>
       <template #right>
         <van-dropdown-menu>
@@ -12,39 +12,36 @@
       <van-loading size="24px">加载中...</van-loading>
     </div>
 
-    <div v-else-if="bonsai" class="content">
-      <div class="bonsai-header">
-        <div class="bonsai-cover">
+    <div v-else-if="bonsai" class="content content-wrapper">
+      <div class="bonsai-header card">
+        <div class="bonsai-cover cover-wrapper">
           <img
-            v-if="bonsai.coverImage"
-            :src="bonsai.coverImage"
+            :src="getBonsaiCover()"
             :alt="bonsai.name"
             class="cover-img"
+            @error="onCoverError"
           />
-          <div v-else class="cover-placeholder">
-            <van-icon name="flower-o" size="60" color="#ccc" />
-          </div>
         </div>
         <div class="bonsai-basic">
           <h2 class="bonsai-name">{{ bonsai.name }}</h2>
           <div class="bonsai-tags">
-            <van-tag v-if="bonsai.species" type="primary" plain>{{ bonsai.species.name }}</van-tag>
-            <van-tag v-if="bonsai.treeAge" type="success" plain>{{ bonsai.treeAge }}年树龄</van-tag>
-            <van-tag v-if="bonsai.potType" type="warning" plain>{{ bonsai.potType }}</van-tag>
+            <van-tag v-if="bonsai.species" type="primary" plain size="small">{{ bonsai.species.name }}</van-tag>
+            <van-tag v-if="bonsai.treeAge" type="success" plain size="small">{{ bonsai.treeAge }}年树龄</van-tag>
+            <van-tag v-if="bonsai.potType" type="warning" plain size="small">{{ bonsai.potType }}</van-tag>
           </div>
           <div v-if="bonsai.acquireDate" class="acquire-info">
-            <van-icon name="calendar-o" />
-            <span>入手日期：{{ formatDate(bonsai.acquireDate) }}</span>
+            <van-icon name="calendar-o" size="14" />
+            <span>入手：{{ formatDate(bonsai.acquireDate) }}</span>
           </div>
         </div>
       </div>
 
-      <div v-if="bonsai.description" class="description-section">
+      <div v-if="bonsai.description" class="description-section card">
         <div class="section-title">简介</div>
         <p class="description-text">{{ bonsai.description }}</p>
       </div>
 
-      <div class="timeline-section">
+      <div class="timeline-section card">
         <div class="timeline-header">
           <div class="section-title">生命周期时间线</div>
           <van-button type="primary" size="small" @click="goAddEvent">
@@ -52,7 +49,10 @@
           </van-button>
         </div>
 
-        <van-empty v-if="events.length === 0" description="还没有记录生命周期事件" />
+        <div v-if="events.length === 0" class="empty-state">
+          <van-icon name="clock-o" class="empty-icon" />
+          <span class="empty-text">还没有记录生命周期事件</span>
+        </div>
 
         <div v-else class="timeline">
           <div
@@ -69,20 +69,21 @@
             <div class="timeline-content">
               <div class="event-card">
                 <div class="event-header">
-                  <van-tag :type="getEventTagType(event.eventType)" size="medium">
+                  <van-tag :type="getEventTagType(event.eventType)" size="small">
                     {{ getEventTypeName(event.eventType) }}
                   </van-tag>
                   <span class="event-date">{{ formatDate(event.eventDate) }}</span>
                 </div>
                 <h4 v-if="event.title" class="event-title">{{ event.title }}</h4>
                 <p v-if="event.content" class="event-content">{{ event.content }}</p>
-                <div v-if="event.images && event.images.length > 0" class="event-images">
+                <div v-if="getEventImages(event).length > 0" class="event-images">
                   <img
-                    v-for="(img, imgIndex) in parseImages(event.images)"
+                    v-for="(img, imgIndex) in getEventImages(event)"
                     :key="imgIndex"
                     :src="img"
                     class="event-image"
                     @click="previewImage(index, imgIndex)"
+                    @error="onEventImageError(event.id, imgIndex)"
                   />
                 </div>
                 <div class="event-actions">
@@ -115,6 +116,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { showToast, showConfirmDialog, showImagePreview } from 'vant'
 import { getBonsaiById, deleteBonsai } from '@/api/bonsai'
 import { getEventsByBonsaiId, deleteEvent as deleteEventApi } from '@/api/lifecycleEvent'
+import { getCoverImage, parseImages, getImageWithFallback, BONSAI_PLACEHOLDER_SVG, PLACEHOLDER_SVG } from '@/utils/image'
 
 const router = useRouter()
 const route = useRoute()
@@ -124,6 +126,8 @@ const loading = ref(false)
 const bonsai = ref(null)
 const events = ref([])
 const actionValue = ref(0)
+const coverError = ref(false)
+const eventImageErrors = ref({})
 const actionOptions = ref([
   { text: '更多操作', value: 0 },
   { text: '编辑', value: 1 },
@@ -144,14 +148,35 @@ const formatDate = (date) => {
   return date
 }
 
-const parseImages = (imagesStr) => {
-  if (!imagesStr) return []
-  try {
-    const parsed = JSON.parse(imagesStr)
-    return Array.isArray(parsed) ? parsed : [imagesStr]
-  } catch {
-    return [imagesStr]
+const getBonsaiCover = () => {
+  if (coverError.value) {
+    return BONSAI_PLACEHOLDER_SVG
   }
+  return getCoverImage(bonsai.value, { useBonsaiPlaceholder: true })
+}
+
+const onCoverError = () => {
+  coverError.value = true
+}
+
+const getEventImages = (event) => {
+  const images = parseImages(event.images)
+  const errorKey = `event_${event.id}`
+  const errors = eventImageErrors.value[errorKey] || {}
+  return images.map((img, idx) => {
+    if (errors[idx]) {
+      return PLACEHOLDER_SVG
+    }
+    return getImageWithFallback(img)
+  })
+}
+
+const onEventImageError = (eventId, imgIndex) => {
+  const errorKey = `event_${eventId}`
+  if (!eventImageErrors.value[errorKey]) {
+    eventImageErrors.value[errorKey] = {}
+  }
+  eventImageErrors.value[errorKey][imgIndex] = true
 }
 
 const getEventTypeName = (type) => {
@@ -178,7 +203,7 @@ const previewImage = (eventIndex, imgIndex) => {
   const allImages = []
   let startPosition = 0
   for (let i = 0; i < events.value.length; i++) {
-    const imgs = parseImages(events.value[i].images)
+    const imgs = getEventImages(events.value[i])
     if (i < eventIndex) {
       startPosition += imgs.length
     }
@@ -271,39 +296,24 @@ onMounted(() => {
 
 <style scoped>
 .bonsai-detail-page {
-  min-height: 100vh;
-  background: #f5f5f5;
   padding-bottom: 40px;
 }
 
-.loading-wrapper {
-  display: flex;
-  justify-content: center;
-  padding: 40px;
-}
-
 .content {
-  padding: 12px;
+  padding-top: var(--spacing-md);
 }
 
 .bonsai-header {
-  background: #fff;
-  border-radius: 12px;
-  padding: 16px;
+  padding: var(--spacing-lg);
   display: flex;
-  gap: 16px;
-  margin-bottom: 12px;
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
 }
 
 .bonsai-cover {
   width: 120px;
   height: 120px;
-  border-radius: 8px;
-  background: #f7f8fa;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
+  border-radius: var(--radius-md);
   flex-shrink: 0;
 }
 
@@ -313,12 +323,6 @@ onMounted(() => {
   object-fit: cover;
 }
 
-.cover-placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
 .bonsai-basic {
   flex: 1;
   display: flex;
@@ -326,63 +330,67 @@ onMounted(() => {
 }
 
 .bonsai-name {
-  font-size: 20px;
-  font-weight: 600;
-  color: #323233;
-  margin: 0 0 10px 0;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin: 0 0 var(--spacing-sm) 0;
 }
 
 .bonsai-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 10px;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-sm);
 }
 
 .acquire-info {
-  font-size: 13px;
-  color: #646566;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--spacing-xs);
+  margin-top: auto;
 }
 
 .description-section {
-  background: #fff;
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 12px;
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
 }
 
-.section-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #323233;
-  margin-bottom: 12px;
+.description-section .section-title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-md);
+  padding-left: var(--spacing-sm);
+  border-left: 3px solid var(--color-primary);
 }
 
 .description-text {
-  font-size: 14px;
-  color: #646566;
-  line-height: 1.6;
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-lg);
   margin: 0;
 }
 
 .timeline-section {
-  background: #fff;
-  border-radius: 12px;
-  padding: 16px;
+  padding: var(--spacing-lg);
 }
 
 .timeline-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-lg);
 }
 
 .timeline-header .section-title {
   margin-bottom: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  padding-left: var(--spacing-sm);
+  border-left: 3px solid var(--color-primary);
 }
 
 .timeline {
@@ -392,7 +400,11 @@ onMounted(() => {
 
 .timeline-item {
   display: flex;
-  padding-bottom: 16px;
+  padding-bottom: var(--spacing-lg);
+}
+
+.timeline-item:last-child {
+  padding-bottom: 0;
 }
 
 .timeline-left {
@@ -412,66 +424,72 @@ onMounted(() => {
   justify-content: center;
   flex-shrink: 0;
   z-index: 1;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .timeline-line {
   width: 2px;
   flex: 1;
-  background: #ebedf0;
-  margin-top: 4px;
+  background: var(--color-border);
+  margin-top: var(--spacing-xs);
 }
 
 .timeline-content {
   flex: 1;
-  padding-left: 12px;
+  padding-left: var(--spacing-sm);
   padding-top: 4px;
 }
 
 .event-card {
-  background: #f7f8fa;
-  border-radius: 8px;
-  padding: 12px;
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
 }
 
 .event-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: var(--spacing-sm);
 }
 
 .event-date {
-  font-size: 12px;
-  color: #969799;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
 }
 
 .event-title {
-  font-size: 15px;
-  font-weight: 500;
-  color: #323233;
-  margin: 0 0 6px 0;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  margin: 0 0 var(--spacing-xs) 0;
 }
 
 .event-content {
-  font-size: 14px;
-  color: #646566;
-  line-height: 1.5;
-  margin: 0 0 10px 0;
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-base);
+  margin: 0 0 var(--spacing-sm) 0;
 }
 
 .event-images {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 10px;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-sm);
 }
 
 .event-image {
   width: 80px;
   height: 80px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   object-fit: cover;
   cursor: pointer;
+  transition: transform var(--transition-fast);
+}
+
+.event-image:active {
+  transform: scale(0.95);
 }
 
 .event-actions {

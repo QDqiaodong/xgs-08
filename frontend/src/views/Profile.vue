@@ -1,5 +1,5 @@
 <template>
-  <div class="profile-page">
+  <div class="profile-page page-container">
     <div class="profile-header">
       <div class="user-info">
         <div class="user-avatar">{{ user.nickname?.charAt(0) || '用' }}</div>
@@ -24,40 +24,52 @@
       </div>
     </div>
 
-    <div class="content">
-      <van-tabs v-model:active="activeTab" sticky>
-        <van-tab title="我的作品">
-          <div class="posts-grid">
-            <div
-              v-for="post in myPosts"
-              :key="post.id"
-              class="post-item"
-              @click="goPostDetail(post.id)"
-            >
-              <div class="post-cover">
-                <img :src="getCoverImage(post)" alt="" />
-                <div class="post-stats">
-                  <van-icon name="eye-o" /> {{ post.viewCount }}
+    <div class="content-wrapper">
+      <div class="content card">
+        <van-tabs v-model:active="activeTab" sticky>
+          <van-tab title="我的作品">
+            <div class="posts-grid">
+              <div
+                v-for="(post, index) in myPosts"
+                :key="post.id"
+                class="post-item"
+                @click="goPostDetail(post.id)"
+              >
+                <div class="post-cover cover-wrapper">
+                  <img 
+                    :src="getPostCover(post, index)" 
+                    :alt="post.title"
+                    @error="onCoverError(index)"
+                  />
+                  <div class="post-stats">
+                    <van-icon name="eye-o" size="10" /> {{ formatCount(post.viewCount) }}
+                  </div>
                 </div>
+                <div class="post-title">{{ post.title }}</div>
               </div>
-              <div class="post-title">{{ post.title }}</div>
             </div>
-            <van-empty v-if="myPosts.length === 0" description="暂无作品" />
-          </div>
-        </van-tab>
-        <van-tab title="养护记录">
-          <div class="logs-list">
-            <div v-for="log in myLogs" :key="log.id" class="log-item">
-              <div class="log-top">
-                <van-tag size="medium">{{ getLogTypeName(log.logType) }}</van-tag>
-                <span class="log-date">{{ log.logDate }}</span>
+            <div v-if="myPosts.length === 0" class="empty-state">
+              <van-icon name="photo-o" class="empty-icon" />
+              <span class="empty-text">暂无作品</span>
+            </div>
+          </van-tab>
+          <van-tab title="养护记录">
+            <div class="logs-list">
+              <div v-for="log in myLogs" :key="log.id" class="log-item card">
+                <div class="log-top">
+                  <van-tag :type="getLogTypeTag(log.logType)" size="small">{{ getLogTypeName(log.logType) }}</van-tag>
+                  <span class="log-date">{{ log.logDate }}</span>
+                </div>
+                <div class="log-content" v-if="log.content">{{ log.content }}</div>
               </div>
-              <div class="log-content" v-if="log.content">{{ log.content }}</div>
+              <div v-if="myLogs.length === 0" class="empty-state">
+                <van-icon name="notes-o" class="empty-icon" />
+                <span class="empty-text">暂无养护记录</span>
+              </div>
             </div>
-            <van-empty v-if="myLogs.length === 0" description="暂无养护记录" />
-          </div>
-        </van-tab>
-      </van-tabs>
+          </van-tab>
+        </van-tabs>
+      </div>
     </div>
 
     <van-tabbar v-model:active="activeFooter" route fixed placeholder>
@@ -77,6 +89,7 @@ import { showToast } from 'vant'
 import { getUserPosts } from '@/api/post'
 import { getUserCareLogs } from '@/api/careLog'
 import { useUserStore } from '@/stores/user'
+import { getCoverImage, PLACEHOLDER_SVG } from '@/utils/image'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -89,6 +102,18 @@ const myLogs = ref([])
 const postCount = ref(0)
 const likeCount = ref(0)
 const logCount = ref(0)
+const coverErrors = ref({})
+
+const formatCount = (count) => {
+  if (!count) return 0
+  if (count >= 10000) {
+    return (count / 10000).toFixed(1) + 'w'
+  }
+  if (count >= 1000) {
+    return (count / 1000).toFixed(1) + 'k'
+  }
+  return count
+}
 
 const getLogTypeName = (type) => {
   const types = {
@@ -101,12 +126,26 @@ const getLogTypeName = (type) => {
   return types[type] || type
 }
 
-const getCoverImage = (post) => {
-  if (post.images && post.images.length > 0) {
-    const cover = post.images.find(img => img.isCover === 1) || post.images[0]
-    return cover.thumbnailUrl || cover.imageUrl || 'https://picsum.photos/200/200?random=' + post.id
+const getLogTypeTag = (type) => {
+  const types = {
+    water: 'primary',
+    fertilize: 'success',
+    prune: 'warning',
+    repot: 'danger',
+    other: 'default'
   }
-  return 'https://picsum.photos/200/200?random=' + post.id
+  return types[type] || 'default'
+}
+
+const getPostCover = (post, index) => {
+  if (coverErrors.value[index]) {
+    return PLACEHOLDER_SVG
+  }
+  return getCoverImage(post)
+}
+
+const onCoverError = (index) => {
+  coverErrors.value[index] = true
 }
 
 const goPostDetail = (id) => {
@@ -142,22 +181,20 @@ onMounted(() => {
 
 <style scoped>
 .profile-page {
-  min-height: 100vh;
-  background: #f5f5f5;
   padding-bottom: 60px;
 }
 
 .profile-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 30px 20px 20px;
+  background: linear-gradient(135deg, var(--color-primary) 0%, #05944a 100%);
+  padding: var(--spacing-3xl) var(--spacing-lg) var(--spacing-xl);
   color: #fff;
 }
 
 .user-info {
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 20px;
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
 }
 
 .user-avatar {
@@ -170,7 +207,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   font-size: 26px;
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   flex-shrink: 0;
 }
 
@@ -179,22 +216,24 @@ onMounted(() => {
 }
 
 .nickname {
-  font-size: 20px;
-  font-weight: bold;
-  margin-bottom: 4px;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  margin-bottom: var(--spacing-xs);
 }
 
 .bio {
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   opacity: 0.9;
+  line-height: var(--line-height-base);
 }
 
 .user-stats {
   display: flex;
   justify-content: space-around;
   background: rgba(255, 255, 255, 0.15);
-  border-radius: 12px;
-  padding: 16px;
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  backdrop-filter: blur(10px);
 }
 
 .user-stats .stat-item {
@@ -202,20 +241,24 @@ onMounted(() => {
 }
 
 .user-stats .stat-value {
-  font-size: 20px;
-  font-weight: bold;
-  margin-bottom: 4px;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  margin-bottom: var(--spacing-xs);
 }
 
 .user-stats .stat-label {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   opacity: 0.9;
 }
 
+.content-wrapper {
+  padding: var(--spacing-md);
+  margin-top: calc(-1 * var(--spacing-md));
+  position: relative;
+  z-index: 1;
+}
+
 .content {
-  background: #fff;
-  margin: 10px;
-  border-radius: 8px;
   overflow: hidden;
 }
 
@@ -227,10 +270,15 @@ onMounted(() => {
 }
 
 .post-item {
-  background: #f5f5f5;
+  background: var(--color-bg-tertiary);
   aspect-ratio: 1;
   position: relative;
   cursor: pointer;
+  transition: transform var(--transition-fast);
+}
+
+.post-item:active {
+  transform: scale(0.98);
 }
 
 .post-cover {
@@ -252,12 +300,13 @@ onMounted(() => {
   right: 4px;
   background: rgba(0, 0, 0, 0.6);
   color: #fff;
-  font-size: 10px;
+  font-size: var(--font-size-xs);
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   display: flex;
   align-items: center;
   gap: 2px;
+  backdrop-filter: blur(4px);
 }
 
 .post-title {
@@ -267,7 +316,7 @@ onMounted(() => {
   right: 0;
   background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
   color: #fff;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   padding: 20px 8px 8px;
   white-space: nowrap;
   overflow: hidden;
@@ -275,31 +324,35 @@ onMounted(() => {
 }
 
 .logs-list {
-  padding: 12px;
+  padding: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
 }
 
 .log-item {
-  padding: 12px;
-  background: #f7f8fa;
-  border-radius: 8px;
-  margin-bottom: 10px;
+  padding: var(--spacing-md);
 }
 
 .log-top {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: var(--spacing-xs);
 }
 
 .log-date {
-  font-size: 12px;
-  color: #999;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
 }
 
 .log-content {
-  font-size: 13px;
-  color: #666;
-  line-height: 1.5;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-base);
+}
+
+.empty-state {
+  padding: var(--spacing-3xl) var(--spacing-lg);
 }
 </style>

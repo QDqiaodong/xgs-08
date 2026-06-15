@@ -144,22 +144,23 @@ onMounted(() => {
 <style scoped>
 .home-page {
   min-height: 100vh;
-  background: #f5f5f5;
+  background: var(--color-bg-page);
 }
 
 .filter-bar {
-  background: #fff;
+  background: var(--color-bg-card);
   position: sticky;
   top: 46px;
   z-index: 100;
+  box-shadow: var(--shadow-sm);
 }
 
 .category-filter {
-  border-top: 1px solid #ebedf0;
+  border-top: 1px solid var(--color-border);
 }
 
 .content {
-  padding: 8px;
+  padding: var(--spacing-sm);
   padding-bottom: 60px;
 }
 </style>

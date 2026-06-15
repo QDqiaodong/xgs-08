@@ -1,44 +1,48 @@
 <template>
-  <div class="bonsai-list-page">
+  <div class="bonsai-list-page page-container">
     <van-nav-bar title="我的盆景" fixed placeholder>
       <template #right>
         <van-button type="primary" size="small" @click="goCreate">新增</van-button>
       </template>
     </van-nav-bar>
 
-    <div class="content">
+    <div class="content content-wrapper">
       <div v-if="loading" class="loading-wrapper">
         <van-loading size="24px">加载中...</van-loading>
       </div>
 
-      <van-empty v-else-if="bonsais.length === 0" description="还没有盆景，快去添加一盆吧" />
+      <div v-else-if="bonsais.length === 0" class="empty-state">
+        <van-icon name="flower-o" class="empty-icon" />
+        <span class="empty-text">还没有盆景，快去添加一盆吧</span>
+        <van-button type="primary" size="small" @click="goCreate" style="margin-top: 16px;">
+          <van-icon name="plus" />添加盆景
+        </van-button>
+      </div>
 
       <div v-else class="bonsai-grid">
         <div
-          v-for="bonsai in bonsais"
+          v-for="(bonsai, index) in bonsais"
           :key="bonsai.id"
-          class="bonsai-card"
+          class="bonsai-card card"
           @click="goDetail(bonsai.id)"
         >
-          <div class="bonsai-cover">
+          <div class="bonsai-cover cover-wrapper">
             <img
-              v-if="bonsai.coverImage"
-              :src="bonsai.coverImage"
+              :src="getBonsaiCover(bonsai, index)"
               :alt="bonsai.name"
               class="cover-img"
+              @error="onCoverError(index)"
             />
-            <div v-else class="cover-placeholder">
-              <van-icon name="flower-o" size="40" color="#ccc" />
-            </div>
           </div>
           <div class="bonsai-info">
-            <div class="bonsai-name">{{ bonsai.name }}</div>
+            <div class="bonsai-name text-ellipsis">{{ bonsai.name }}</div>
             <div class="bonsai-meta">
-              <span v-if="bonsai.species" class="species-tag">{{ bonsai.species.name }}</span>
-              <span v-if="bonsai.treeAge" class="age-tag">{{ bonsai.treeAge }}年</span>
+              <van-tag v-if="bonsai.species" size="mini" type="primary" plain>{{ bonsai.species.name }}</van-tag>
+              <van-tag v-if="bonsai.treeAge" size="mini" type="success" plain>{{ bonsai.treeAge }}年</van-tag>
             </div>
             <div v-if="bonsai.acquireDate" class="acquire-date">
-              入手：{{ formatDate(bonsai.acquireDate) }}
+              <van-icon name="calendar-o" size="10" />
+              <span>{{ formatDate(bonsai.acquireDate) }}</span>
             </div>
           </div>
         </div>
@@ -61,6 +65,7 @@ import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import { getUserBonsaiList } from '@/api/bonsai'
 import { useUserStore } from '@/stores/user'
+import { getCoverImage, BONSAI_PLACEHOLDER_SVG } from '@/utils/image'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -68,10 +73,22 @@ const userStore = useUserStore()
 const activeFooter = ref(1)
 const loading = ref(false)
 const bonsais = ref([])
+const coverErrors = ref({})
 
 const formatDate = (date) => {
   if (!date) return ''
   return date
+}
+
+const getBonsaiCover = (bonsai, index) => {
+  if (coverErrors.value[index]) {
+    return BONSAI_PLACEHOLDER_SVG
+  }
+  return getCoverImage(bonsai, { useBonsaiPlaceholder: true })
+}
+
+const onCoverError = (index) => {
+  coverErrors.value[index] = true
 }
 
 const loadBonsais = async () => {
@@ -102,42 +119,33 @@ onMounted(() => {
 
 <style scoped>
 .bonsai-list-page {
-  min-height: 100vh;
-  background: #f5f5f5;
   padding-bottom: 60px;
 }
 
 .content {
-  padding: 12px;
-}
-
-.loading-wrapper {
-  display: flex;
-  justify-content: center;
-  padding: 40px;
+  padding-top: var(--spacing-md);
 }
 
 .bonsai-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  gap: var(--spacing-md);
 }
 
 .bonsai-card {
-  background: #fff;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  cursor: pointer;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.bonsai-card:active {
+  transform: scale(0.98);
+  box-shadow: var(--shadow-sm);
 }
 
 .bonsai-cover {
   width: 100%;
   aspect-ratio: 1;
-  background: #f7f8fa;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
+  background: var(--color-bg-tertiary);
 }
 
 .cover-img {
@@ -146,43 +154,29 @@ onMounted(() => {
   object-fit: cover;
 }
 
-.cover-placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
 .bonsai-info {
-  padding: 12px;
+  padding: var(--spacing-sm);
 }
 
 .bonsai-name {
-  font-size: 16px;
-  font-weight: 600;
-  color: #323233;
-  margin-bottom: 6px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-xs);
 }
 
 .bonsai-meta {
   display: flex;
-  gap: 6px;
-  margin-bottom: 6px;
-}
-
-.species-tag,
-.age-tag {
-  font-size: 12px;
-  padding: 2px 6px;
-  background: #f2f3f5;
-  color: #646566;
-  border-radius: 4px;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-xs);
+  flex-wrap: wrap;
 }
 
 .acquire-date {
-  font-size: 12px;
-  color: #969799;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  display: flex;
+  align-items: center;
+  gap: 2px;
 }
 </style>

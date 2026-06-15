@@ -1,52 +1,75 @@
 <template>
-  <div class="care-logs-page">
+  <div class="care-logs-page page-container">
     <van-nav-bar title="养护日志" fixed placeholder>
       <template #right>
         <van-button type="primary" size="small" @click="showAddDialog = true">记录</van-button>
       </template>
     </van-nav-bar>
 
-    <div class="content">
-      <van-tabs v-model:active="activeTab">
-        <van-tab title="全部记录">
-          <div class="logs-list">
-            <div v-for="log in careLogs" :key="log.id" class="log-card">
-              <div class="log-header">
-                <van-tag :type="getLogTypeTag(log.logType)" size="medium">{{ getLogTypeName(log.logType) }}</van-tag>
-                <span class="log-date">{{ log.logDate }}</span>
+    <div class="content-wrapper">
+      <div class="content card">
+        <van-tabs v-model:active="activeTab">
+          <van-tab title="全部记录">
+            <div class="logs-list">
+              <div v-for="log in careLogs" :key="log.id" class="log-card">
+                <div class="log-header">
+                  <van-tag :type="getLogTypeTag(log.logType)" size="small">{{ getLogTypeName(log.logType) }}</van-tag>
+                  <span class="log-date">
+                    <van-icon name="clock-o" size="10" />
+                    {{ log.logDate }}
+                  </span>
+                </div>
+                <h3 class="log-title" v-if="log.title">{{ log.title }}</h3>
+                <p class="log-content" v-if="log.content">{{ log.content }}</p>
               </div>
-              <h3 class="log-title" v-if="log.title">{{ log.title }}</h3>
-              <p class="log-content" v-if="log.content">{{ log.content }}</p>
-            </div>
-            <van-empty v-if="careLogs.length === 0 && !loading" description="暂无养护记录" />
-            <div v-if="loading" class="loading-wrapper">
-              <van-loading size="24px">加载中...</van-loading>
-            </div>
-          </div>
-        </van-tab>
-        <van-tab title="统计">
-          <div class="stats-section">
-            <div class="stats-grid">
-              <div class="stat-item">
-                <div class="stat-value">{{ stats.total }}</div>
-                <div class="stat-label">总记录</div>
+              <div v-if="careLogs.length === 0 && !loading" class="empty-state">
+                <van-icon name="notes-o" class="empty-icon" />
+                <span class="empty-text">暂无养护记录</span>
+                <van-button type="primary" size="small" @click="showAddDialog = true" style="margin-top: 16px;">
+                  <van-icon name="plus" />记录养护
+                </van-button>
               </div>
-              <div class="stat-item water">
-                <div class="stat-value">{{ stats.water }}</div>
-                <div class="stat-label">浇水</div>
-              </div>
-              <div class="stat-item fertilize">
-                <div class="stat-value">{{ stats.fertilize }}</div>
-                <div class="stat-label">施肥</div>
-              </div>
-              <div class="stat-item prune">
-                <div class="stat-value">{{ stats.prune }}</div>
-                <div class="stat-label">修剪</div>
+              <div v-if="loading" class="loading-wrapper">
+                <van-loading size="24px">加载中...</van-loading>
               </div>
             </div>
-          </div>
-        </van-tab>
-      </van-tabs>
+          </van-tab>
+          <van-tab title="统计">
+            <div class="stats-section">
+              <div class="stats-grid">
+                <div class="stat-item card">
+                  <div class="stat-icon">
+                    <van-icon name="orders-o" size="24" color="#323233" />
+                  </div>
+                  <div class="stat-value">{{ stats.total }}</div>
+                  <div class="stat-label">总记录</div>
+                </div>
+                <div class="stat-item card water">
+                  <div class="stat-icon">
+                    <van-icon name="down" size="24" color="#1989fa" />
+                  </div>
+                  <div class="stat-value">{{ stats.water }}</div>
+                  <div class="stat-label">浇水</div>
+                </div>
+                <div class="stat-item card fertilize">
+                  <div class="stat-icon">
+                    <van-icon name="balance-o" size="24" color="#07c160" />
+                  </div>
+                  <div class="stat-value">{{ stats.fertilize }}</div>
+                  <div class="stat-label">施肥</div>
+                </div>
+                <div class="stat-item card prune">
+                  <div class="stat-icon">
+                    <van-icon name="scissors-o" size="24" color="#ff976a" />
+                  </div>
+                  <div class="stat-value">{{ stats.prune }}</div>
+                  <div class="stat-label">修剪</div>
+                </div>
+              </div>
+            </div>
+          </van-tab>
+        </van-tabs>
+      </div>
     </div>
 
     <van-tabbar v-model:active="activeFooter" route fixed placeholder>
@@ -202,92 +225,123 @@ onMounted(() => {
 
 <style scoped>
 .care-logs-page {
-  min-height: 100vh;
-  background: #f5f5f5;
   padding-bottom: 60px;
 }
 
+.content-wrapper {
+  padding: var(--spacing-md);
+}
+
 .content {
-  padding: 10px;
+  overflow: hidden;
 }
 
 .logs-list {
-  padding: 10px 0;
+  padding: var(--spacing-md) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
 }
 
 .log-card {
-  background: #fff;
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 12px;
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
 }
 
 .log-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: var(--spacing-sm);
 }
 
 .log-date {
-  font-size: 12px;
-  color: #999;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  display: flex;
+  align-items: center;
+  gap: 2px;
 }
 
 .log-title {
-  font-size: 16px;
-  font-weight: 500;
-  color: #333;
-  margin-bottom: 8px;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-xs);
 }
 
 .log-content {
-  font-size: 14px;
-  color: #666;
-  line-height: 1.6;
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-lg);
 }
 
 .loading-wrapper {
   display: flex;
   justify-content: center;
-  padding: 40px;
+  padding: var(--spacing-3xl);
 }
 
 .stats-section {
-  padding: 16px;
+  padding: var(--spacing-md);
 }
 
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  gap: var(--spacing-md);
 }
 
 .stat-item {
-  background: #fff;
-  border-radius: 12px;
-  padding: 20px;
+  padding: var(--spacing-lg);
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--color-bg-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--spacing-xs);
 }
 
 .stat-value {
-  font-size: 28px;
-  font-weight: bold;
-  color: #333;
-  margin-bottom: 4px;
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
 }
 
 .stat-label {
-  font-size: 14px;
-  color: #999;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+}
+
+.stat-item.water .stat-icon {
+  background: rgba(25, 137, 250, 0.1);
 }
 
 .stat-item.water .stat-value {
   color: #1989fa;
 }
 
+.stat-item.fertilize .stat-icon {
+  background: rgba(7, 193, 96, 0.1);
+}
+
 .stat-item.fertilize .stat-value {
   color: #07c160;
+}
+
+.stat-item.prune .stat-icon {
+  background: rgba(255, 151, 106, 0.1);
 }
 
 .stat-item.prune .stat-value {
