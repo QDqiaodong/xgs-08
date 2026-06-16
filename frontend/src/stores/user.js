@@ -7,8 +7,14 @@ export const useUserStore = defineStore('user', {
       username: 'bonsai_master',
       nickname: '盆景大师',
       avatar: '',
+      email: '',
+      bio: '',
     },
   }),
+  getters: {
+    isLoggedIn: (state) => !!state.currentUser,
+    userId: (state) => state.currentUser?.id,
+  },
   actions: {
     setUser(user) {
       this.currentUser = user
@@ -17,5 +23,8 @@ export const useUserStore = defineStore('user', {
       this.currentUser = null
     },
   },
-  persist: true,
+  persist: {
+    key: 'bonsai-user',
+    storage: localStorage,
+  },
 })

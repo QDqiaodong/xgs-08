@@ -83,7 +83,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import { getUserPosts } from '@/api/post'
@@ -94,7 +94,7 @@ import { getCoverImage, PLACEHOLDER_SVG } from '@/utils/image'
 const router = useRouter()
 const userStore = useUserStore()
 
-const user = ref(userStore.currentUser)
+const user = computed(() => userStore.currentUser)
 const activeTab = ref(0)
 const activeFooter = ref(4)
 const myPosts = ref([])

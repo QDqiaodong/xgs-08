@@ -1,5 +1,6 @@
 package com.bonsai.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
@@ -24,6 +25,7 @@ public class User {
 
     private String avatar;
 
+    @JsonIgnore
     @Column(nullable = false)
     private String password;
 
