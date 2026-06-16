@@ -68,6 +68,81 @@
               </div>
             </div>
           </van-tab>
+          <van-tab title="节气视图">
+            <div class="solar-term-view">
+              <div v-if="loading" class="loading-wrapper">
+                <van-loading size="24px">加载中...</van-loading>
+              </div>
+              <div v-else-if="careLogs.length === 0" class="empty-state">
+                <van-icon name="notes-o" class="empty-icon" />
+                <span class="empty-text">暂无养护记录</span>
+                <van-button type="primary" size="small" @click="showAddDialog = true" style="margin-top: 16px;">
+                  <van-icon name="plus" />记录养护
+                </van-button>
+              </div>
+              <div v-else>
+                <div class="season-filter">
+                  <van-radio-group v-model="selectedSeason" direction="horizontal">
+                    <van-radio name="all">全部</van-radio>
+                    <van-radio name="spring">春季</van-radio>
+                    <van-radio name="summer">夏季</van-radio>
+                    <van-radio name="autumn">秋季</van-radio>
+                    <van-radio name="winter">冬季</van-radio>
+                  </van-radio-group>
+                </div>
+                <div v-for="season in displaySeasons" :key="season" class="season-section">
+                  <div class="season-header" :style="{ background: groupedLogs[season].seasonInfo.bgColor, color: groupedLogs[season].seasonInfo.color }">
+                    <span class="season-icon">{{ groupedLogs[season].seasonInfo.icon }}</span>
+                    <span class="season-name">{{ groupedLogs[season].seasonInfo.name }}</span>
+                    <span class="season-count">{{ getSeasonLogCount(groupedLogs[season]) }}条记录</span>
+                  </div>
+                  <div class="terms-container">
+                    <div v-for="(term, termName) in groupedLogs[season].terms" :key="termName" class="term-card" :class="{ 'has-logs': term.logs.length > 0 }">
+                      <div class="term-header" :style="{ borderLeftColor: groupedLogs[season].seasonInfo.color }">
+                        <span class="term-name">{{ termName }}</span>
+                        <span class="term-date">{{ String(term.month).padStart(2, '0') }}-{{ String(term.day).padStart(2, '0') }}</span>
+                      </div>
+                      <div v-if="term.logs.length > 0" class="term-logs">
+                        <div v-for="log in term.logs" :key="log.id" class="term-log-item">
+                          <van-tag :type="getLogTypeTag(log.logType)" size="small">{{ getLogTypeName(log.logType) }}</van-tag>
+                          <span class="term-log-content">{{ log.content || log.title }}</span>
+                          <span class="term-log-date">{{ log.logDate }}</span>
+                        </div>
+                      </div>
+                      <div v-else class="term-empty">
+                        <van-icon name="clock-o" size="12" />
+                        <span>暂无记录</span>
+                      </div>
+                      <div v-if="term.logs.length > 0" class="term-tips">
+                        <div class="tip-header">
+                          <van-icon name="info-o" size="12" />
+                          <span>{{ termName }}养护建议</span>
+                        </div>
+                        <div class="tip-content">
+                          <div v-if="getCareTips(termName).water" class="tip-item">
+                            <van-icon name="down" size="12" />
+                            <span>浇水: {{ getCareTips(termName).water }}</span>
+                          </div>
+                          <div v-if="getCareTips(termName).fertilize" class="tip-item">
+                            <van-icon name="balance-o" size="12" />
+                            <span>施肥: {{ getCareTips(termName).fertilize }}</span>
+                          </div>
+                          <div v-if="getCareTips(termName).prune" class="tip-item">
+                            <van-icon name="scissors-o" size="12" />
+                            <span>修剪: {{ getCareTips(termName).prune }}</span>
+                          </div>
+                          <div v-if="getCareTips(termName).repot" class="tip-item">
+                            <van-icon name="exchange" size="12" />
+                            <span>换盆: {{ getCareTips(termName).repot }}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </van-tab>
         </van-tabs>
       </div>
     </div>
@@ -127,6 +202,7 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { showToast } from 'vant'
 import { getUserCareLogs, createCareLog } from '@/api/careLog'
 import { useUserStore } from '@/stores/user'
+import { getCareTips, groupLogsBySolarTerm, SEASON_ORDER } from '@/utils/solarTerms'
 
 const userStore = useUserStore()
 
@@ -136,6 +212,7 @@ const loading = ref(false)
 const careLogs = ref([])
 const showAddDialog = ref(false)
 const showTypePicker = ref(false)
+const selectedSeason = ref('all')
 
 const logForm = reactive({
   logType: 'water',
@@ -155,13 +232,24 @@ const logTypes = [
 const selectedTypeName = ref('浇水')
 
 const stats = computed(() => {
-  const result = { total: careLogs.value.length, water: 0, fertilize: 0, prune: 0 }
+  const result = { total: careLogs.value.length, water: 0, fertilize: 0, prune: 0, repot: 0, other: 0 }
   careLogs.value.forEach(log => {
     if (result.hasOwnProperty(log.logType)) {
       result[log.logType]++
     }
   })
   return result
+})
+
+const groupedLogs = computed(() => {
+  return groupLogsBySolarTerm(careLogs.value)
+})
+
+const displaySeasons = computed(() => {
+  if (selectedSeason.value === 'all') {
+    return SEASON_ORDER
+  }
+  return [selectedSeason.value]
 })
 
 const getLogTypeName = (type) => {
@@ -180,6 +268,14 @@ const getLogTypeTag = (type) => {
   return types[type] || 'default'
 }
 
+const getSeasonLogCount = (seasonData) => {
+  let count = 0
+  Object.values(seasonData.terms).forEach(term => {
+    count += term.logs.length
+  })
+  return count
+}
+
 const onTypeConfirm = ({ selectedOptions }) => {
   logForm.logType = selectedOptions[0].value
   selectedTypeName.value = selectedOptions[0].text
@@ -189,7 +285,7 @@ const onTypeConfirm = ({ selectedOptions }) => {
 const loadLogs = async () => {
   loading.value = true
   try {
-    const data = await getUserCareLogs(userStore.currentUser.id, { page: 0, size: 50 })
+    const data = await getUserCareLogs(userStore.currentUser.id, { page: 0, size: 100 })
     careLogs.value = data.content || []
   } catch (e) {
     showToast('加载失败')
@@ -346,5 +442,185 @@ onMounted(() => {
 
 .stat-item.prune .stat-value {
   color: #ff976a;
+}
+
+.solar-term-view {
+  padding: var(--spacing-md) 0;
+}
+
+.season-filter {
+  padding: var(--spacing-md);
+  background: var(--color-bg-tertiary);
+  margin-bottom: var(--spacing-md);
+}
+
+.season-filter :deep(.van-radio-group) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+}
+
+.season-filter :deep(.van-radio) {
+  flex: 1;
+  min-width: 60px;
+  justify-content: center;
+}
+
+.season-section {
+  margin-bottom: var(--spacing-lg);
+}
+
+.season-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-lg);
+}
+
+.season-icon {
+  font-size: var(--font-size-xl);
+}
+
+.season-name {
+  flex: 1;
+}
+
+.season-count {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-normal);
+  opacity: 0.8;
+}
+
+.terms-container {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  background: var(--color-bg-tertiary);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+}
+
+.term-card {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  transition: all var(--transition-base);
+  border: 1px solid transparent;
+}
+
+.term-card.has-logs {
+  border-color: var(--color-border);
+  box-shadow: var(--shadow-sm);
+}
+
+.term-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-sm);
+  padding-left: var(--spacing-sm);
+  border-left: 3px solid;
+}
+
+.term-name {
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-md);
+  color: var(--color-text-primary);
+}
+
+.term-date {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  background: var(--color-bg-secondary);
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+}
+
+.term-logs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.term-log-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+}
+
+.term-log-content {
+  flex: 1;
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.term-log-date {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+}
+
+.term-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm);
+  color: var(--color-text-placeholder);
+  font-size: var(--font-size-sm);
+}
+
+.term-tips {
+  margin-top: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  background: var(--color-primary-light);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--color-primary);
+}
+
+.tip-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-primary);
+  margin-bottom: var(--spacing-xs);
+}
+
+.tip-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.tip-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.tip-item .van-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--color-primary);
+}
+
+@media (min-width: 600px) {
+  .terms-container {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 </style>
