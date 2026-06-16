@@ -36,6 +36,12 @@
         </div>
       </div>
 
+      <SpeciesCareTip
+        v-if="bonsai.species"
+        :species-name="bonsai.species.name"
+        :default-expanded="true"
+      />
+
       <div v-if="bonsai.description" class="description-section card">
         <div class="section-title">简介</div>
         <p class="description-text">{{ bonsai.description }}</p>
@@ -173,6 +179,7 @@ import { getBonsaiById, deleteBonsai } from '@/api/bonsai'
 import { getEventsByBonsaiId, deleteEvent as deleteEventApi } from '@/api/lifecycleEvent'
 import { getCoverImage, parseImages, getImageWithFallback, BONSAI_PLACEHOLDER_SVG, PLACEHOLDER_SVG } from '@/utils/image'
 import BeforeAfterCompare from '@/components/BeforeAfterCompare.vue'
+import SpeciesCareTip from '@/components/SpeciesCareTip.vue'
 
 const router = useRouter()
 const route = useRoute()

@@ -11,15 +11,43 @@
         <van-loading size="24px">加载中...</van-loading>
       </div>
 
-      <div v-else-if="bonsais.length === 0" class="empty-state">
-        <van-icon name="flower-o" class="empty-icon" />
-        <span class="empty-text">还没有盆景，快去添加一盆吧</span>
-        <van-button type="primary" size="small" @click="goCreate" style="margin-top: 16px;">
-          <van-icon name="plus" />添加盆景
-        </van-button>
-      </div>
+      <div v-else>
+        <div v-if="speciesWithCareData.length > 0" class="care-tips-section">
+          <div class="section-header">
+            <div class="section-title">
+              <van-icon name="bulb-o" size="18" />
+              <span>树种护理提示</span>
+            </div>
+            <div class="species-tabs">
+              <div
+                v-for="(species, idx) in speciesWithCareData"
+                :key="species.name"
+                class="species-tab"
+                :class="{ active: idx === selectedSpeciesIndex }"
+                @click="selectedSpeciesIndex = idx"
+              >
+                <span class="tab-icon">{{ species.careData.icon }}</span>
+                <span class="tab-name">{{ species.name }}</span>
+                <span class="tab-count">{{ species.count }}</span>
+              </div>
+            </div>
+          </div>
+          <SpeciesCareTip
+            v-if="selectedSpecies"
+            :species-name="selectedSpecies.name"
+            :default-expanded="false"
+          />
+        </div>
 
-      <div v-else class="bonsai-grid">
+        <div v-if="bonsais.length === 0" class="empty-state">
+          <van-icon name="flower-o" class="empty-icon" />
+          <span class="empty-text">还没有盆景，快去添加一盆吧</span>
+          <van-button type="primary" size="small" @click="goCreate" style="margin-top: 16px;">
+            <van-icon name="plus" />添加盆景
+          </van-button>
+        </div>
+
+        <div v-else class="bonsai-grid">
         <div
           v-for="(bonsai, index) in bonsais"
           :key="bonsai.id"
@@ -46,6 +74,7 @@
             </div>
           </div>
         </div>
+        </div>
       </div>
     </div>
 
@@ -60,12 +89,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import { getUserBonsaiList } from '@/api/bonsai'
 import { useUserStore } from '@/stores/user'
 import { getCoverImage, BONSAI_PLACEHOLDER_SVG } from '@/utils/image'
+import SpeciesCareTip from '@/components/SpeciesCareTip.vue'
+import { getSpeciesCare } from '@/utils/speciesCare'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -74,6 +105,32 @@ const activeFooter = ref(1)
 const loading = ref(false)
 const bonsais = ref([])
 const coverErrors = ref({})
+const selectedSpeciesIndex = ref(0)
+
+const speciesWithCareData = computed(() => {
+  const speciesMap = new Map()
+  bonsais.value.forEach(bonsai => {
+    if (bonsai.species && bonsai.species.name) {
+      const speciesName = bonsai.species.name
+      const careData = getSpeciesCare(speciesName)
+      if (careData && !speciesMap.has(speciesName)) {
+        speciesMap.set(speciesName, {
+          name: speciesName,
+          careData: careData,
+          count: 1
+        })
+      } else if (speciesMap.has(speciesName)) {
+        speciesMap.get(speciesName).count++
+      }
+    }
+  })
+  return Array.from(speciesMap.values())
+})
+
+const selectedSpecies = computed(() => {
+  if (speciesWithCareData.value.length === 0) return null
+  return speciesWithCareData.value[selectedSpeciesIndex.value]
+})
 
 const formatDate = (date) => {
   if (!date) return ''
@@ -178,5 +235,82 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 2px;
+}
+
+.care-tips-section {
+  margin-bottom: var(--spacing-md);
+}
+
+.care-tips-section .section-header {
+  margin-bottom: var(--spacing-sm);
+}
+
+.care-tips-section .section-title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-sm);
+  padding-left: var(--spacing-sm);
+  border-left: 3px solid var(--color-primary);
+}
+
+.care-tips-section .section-title .van-icon {
+  color: var(--color-warning);
+}
+
+.species-tabs {
+  display: flex;
+  gap: var(--spacing-xs);
+  overflow-x: auto;
+  padding-bottom: var(--spacing-xs);
+  scrollbar-width: none;
+}
+
+.species-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.species-tab {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  flex-shrink: 0;
+  border: 1px solid transparent;
+}
+
+.species-tab.active {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.tab-icon {
+  font-size: 14px;
+}
+
+.tab-name {
+  font-weight: var(--font-weight-medium);
+}
+
+.tab-count {
+  background: var(--color-bg-tertiary);
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+}
+
+.species-tab.active .tab-count {
+  background: var(--color-primary);
+  color: #fff;
 }
 </style>
