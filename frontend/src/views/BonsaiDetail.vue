@@ -113,7 +113,25 @@
                 </div>
                 <h4 v-if="event.title" class="event-title">{{ event.title }}</h4>
                 <p v-if="event.content" class="event-content">{{ event.content }}</p>
-                <div v-if="getEventImages(event).length > 0" class="event-images">
+                
+                <div v-if="hasBeforeAfterCompare(event)" class="before-after-section">
+                  <div class="compare-section-header">
+                    <van-icon name="eye-o" />
+                    <span>造型前后对照</span>
+                  </div>
+                  <BeforeAfterCompare
+                    v-for="(pair, pairIndex) in getComparePairs(event)"
+                    :key="pairIndex"
+                    :before-image="pair.before"
+                    :after-image="pair.after"
+                    :before-label="getBeforeLabel(event.eventType)"
+                    :after-label="getAfterLabel(event.eventType)"
+                    :event-type="event.eventType"
+                    class="compare-item"
+                  />
+                </div>
+                
+                <div v-if="getEventImages(event).length > 0 && !hasBeforeAfterCompare(event)" class="event-images">
                   <img
                     v-for="(img, imgIndex) in getEventImages(event)"
                     :key="imgIndex"
@@ -154,6 +172,7 @@ import { showToast, showConfirmDialog, showImagePreview } from 'vant'
 import { getBonsaiById, deleteBonsai } from '@/api/bonsai'
 import { getEventsByBonsaiId, deleteEvent as deleteEventApi } from '@/api/lifecycleEvent'
 import { getCoverImage, parseImages, getImageWithFallback, BONSAI_PLACEHOLDER_SVG, PLACEHOLDER_SVG } from '@/utils/image'
+import BeforeAfterCompare from '@/components/BeforeAfterCompare.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -165,6 +184,7 @@ const events = ref([])
 const actionValue = ref(0)
 const coverError = ref(false)
 const eventImageErrors = ref({})
+const eventBeforeImageErrors = ref({})
 const actionOptions = ref([
   { text: '更多操作', value: 0 },
   { text: '编辑', value: 1 },
@@ -213,12 +233,78 @@ const getEventImages = (event) => {
   })
 }
 
+const getEventBeforeImages = (event) => {
+  const images = parseImages(event.beforeImages)
+  const errorKey = `event_before_${event.id}`
+  const errors = eventBeforeImageErrors.value[errorKey] || {}
+  return images.map((img, idx) => {
+    if (errors[idx]) {
+      return PLACEHOLDER_SVG
+    }
+    return getImageWithFallback(img)
+  })
+}
+
+const hasBeforeAfterCompare = (event) => {
+  const beforeImages = getEventBeforeImages(event)
+  const afterImages = getEventImages(event)
+  return beforeImages.length > 0 && afterImages.length > 0
+}
+
+const getComparePairs = (event) => {
+  const beforeImages = getEventBeforeImages(event)
+  const afterImages = getEventImages(event)
+  const pairs = []
+  const maxLen = Math.max(beforeImages.length, afterImages.length)
+  
+  for (let i = 0; i < maxLen; i++) {
+    pairs.push({
+      before: beforeImages[i] || beforeImages[beforeImages.length - 1],
+      after: afterImages[i] || afterImages[afterImages.length - 1]
+    })
+  }
+  
+  return pairs
+}
+
 const onEventImageError = (eventId, imgIndex) => {
   const errorKey = `event_${eventId}`
   if (!eventImageErrors.value[errorKey]) {
     eventImageErrors.value[errorKey] = {}
   }
   eventImageErrors.value[errorKey][imgIndex] = true
+}
+
+const onEventBeforeImageError = (eventId, imgIndex) => {
+  const errorKey = `event_before_${eventId}`
+  if (!eventBeforeImageErrors.value[errorKey]) {
+    eventBeforeImageErrors.value[errorKey] = {}
+  }
+  eventBeforeImageErrors.value[errorKey][imgIndex] = true
+}
+
+const getBeforeLabel = (eventType) => {
+  const labels = {
+    pruning: '修剪前',
+    wiring: '蟠扎前',
+    repotting: '换盆前',
+    planting: '定植前',
+    acquire: '入手前',
+    other: '造型前'
+  }
+  return labels[eventType] || '造型前'
+}
+
+const getAfterLabel = (eventType) => {
+  const labels = {
+    pruning: '修剪后',
+    wiring: '蟠扎后',
+    repotting: '换盆后',
+    planting: '定植后',
+    acquire: '入手后',
+    other: '造型后'
+  }
+  return labels[eventType] || '造型后'
 }
 
 const getEventTypeName = (type) => {
@@ -532,6 +618,32 @@ onMounted(() => {
 
 .event-image:active {
   transform: scale(0.95);
+}
+
+.before-after-section {
+  margin-bottom: var(--spacing-md);
+}
+
+.compare-section-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-primary);
+  margin-bottom: var(--spacing-sm);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: var(--color-primary-light);
+  border-radius: var(--radius-xs);
+  align-self: flex-start;
+}
+
+.compare-item {
+  margin-bottom: var(--spacing-sm);
+}
+
+.compare-item:last-child {
+  margin-bottom: 0;
 }
 
 .event-actions {

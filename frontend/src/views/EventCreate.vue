@@ -48,14 +48,34 @@
         </van-cell-group>
 
         <div class="upload-section">
-          <div class="section-title">上传图片（选填）</div>
+          <div class="section-title">
+            <van-icon name="photo-o" />
+            造型前照片（选填）
+          </div>
+          <div class="upload-hint">记录造型改造前的状态，用于前后对比</div>
           <van-uploader
-            v-model="fileList"
+            v-model="beforeFileList"
             :max-count="9"
             :before-read="beforeRead"
-            :after-read="afterRead"
+            :after-read="(file) => afterRead(file, 'before')"
             multiple
-            upload-text="上传图片"
+            upload-text="上传造型前照片"
+          />
+        </div>
+
+        <div class="upload-section">
+          <div class="section-title">
+            <van-icon name="photograph" />
+            造型后照片（选填）
+          </div>
+          <div class="upload-hint">记录造型完成后的效果</div>
+          <van-uploader
+            v-model="afterFileList"
+            :max-count="9"
+            :before-read="beforeRead"
+            :after-read="(file) => afterRead(file, 'after')"
+            multiple
+            upload-text="上传造型后照片"
           />
         </div>
 
@@ -101,10 +121,12 @@ const form = reactive({
   title: '',
   content: '',
   eventDate: new Date().toISOString().split('T')[0],
-  images: ''
+  images: '',
+  beforeImages: ''
 })
 
-const fileList = ref([])
+const beforeFileList = ref([])
+const afterFileList = ref([])
 const submitting = ref(false)
 const showTypePicker = ref(false)
 const eventTypeColumns = ref(eventTypes)
@@ -128,7 +150,7 @@ const beforeRead = (file) => {
   return true
 }
 
-const afterRead = (file) => {
+const afterRead = (file, type = 'after') => {
   file.status = 'uploading'
   file.message = '上传中...'
   setTimeout(() => {
@@ -139,9 +161,14 @@ const afterRead = (file) => {
 const onSubmit = async () => {
   submitting.value = true
   try {
-    const images = fileList.value.map(f => f.content).filter(Boolean)
-    if (images.length > 0) {
-      form.images = JSON.stringify(images)
+    const afterImages = afterFileList.value.map(f => f.content).filter(Boolean)
+    if (afterImages.length > 0) {
+      form.images = JSON.stringify(afterImages)
+    }
+
+    const beforeImages = beforeFileList.value.map(f => f.content).filter(Boolean)
+    if (beforeImages.length > 0) {
+      form.beforeImages = JSON.stringify(beforeImages)
     }
 
     const data = {
@@ -169,7 +196,7 @@ const goBack = () => {
 <style scoped>
 .event-create-page {
   min-height: 100vh;
-  background: #f5f5f5;
+  background: var(--color-bg-page);
   padding-bottom: 20px;
 }
 
@@ -179,15 +206,25 @@ const goBack = () => {
 
 .upload-section {
   margin: 16px;
-  background: #fff;
-  border-radius: 8px;
-  padding: 16px;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  box-shadow: var(--shadow-sm);
 }
 
 .section-title {
-  font-size: 14px;
-  color: #969799;
-  margin-bottom: 12px;
-  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-md);
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.upload-hint {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+  margin-bottom: var(--spacing-md);
 }
 </style>

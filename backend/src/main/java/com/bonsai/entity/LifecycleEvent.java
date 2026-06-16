@@ -47,6 +47,10 @@ public class LifecycleEvent {
     @Column(length = 1000)
     private String images;
 
+    @Size(max = 2000, message = "造型前图片数据长度不能超过2000个字符")
+    @Column(name = "before_images", length = 1000)
+    private String beforeImages;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
