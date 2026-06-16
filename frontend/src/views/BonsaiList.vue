@@ -28,7 +28,7 @@
               >
                 <span class="tab-icon">{{ species.careData.icon }}</span>
                 <span class="tab-name">{{ species.name }}</span>
-                <span class="tab-count">{{ species.count }}</span>
+                <span v-if="species.count > 0" class="tab-count">{{ species.count }}</span>
               </div>
             </div>
           </div>
@@ -106,25 +106,24 @@ const loading = ref(false)
 const bonsais = ref([])
 const coverErrors = ref({})
 const selectedSpeciesIndex = ref(0)
+const coreCareSpecies = ['榕树', '真柏', '黑松']
 
 const speciesWithCareData = computed(() => {
-  const speciesMap = new Map()
+  const speciesCounts = new Map()
   bonsais.value.forEach(bonsai => {
-    if (bonsai.species && bonsai.species.name) {
-      const speciesName = bonsai.species.name
-      const careData = getSpeciesCare(speciesName)
-      if (careData && !speciesMap.has(speciesName)) {
-        speciesMap.set(speciesName, {
-          name: speciesName,
-          careData: careData,
-          count: 1
-        })
-      } else if (speciesMap.has(speciesName)) {
-        speciesMap.get(speciesName).count++
-      }
+    const speciesName = bonsai.species?.name || coreCareSpecies.find(name => bonsai.name?.includes(name))
+    if (speciesName) {
+      speciesCounts.set(speciesName, (speciesCounts.get(speciesName) || 0) + 1)
     }
   })
-  return Array.from(speciesMap.values())
+
+  return coreCareSpecies
+    .map(name => ({
+      name,
+      careData: getSpeciesCare(name),
+      count: speciesCounts.get(name) || 0
+    }))
+    .filter(species => species.careData)
 })
 
 const selectedSpecies = computed(() => {
