@@ -56,10 +56,25 @@
       <div class="post-section-card card">
         <h3 class="section-title">养护日志</h3>
         <div class="care-logs">
-          <div v-for="log in careLogs" :key="log.id" class="care-log-item">
+          <div v-for="log in careLogs" :key="log.id" class="care-log-item" :class="'log-' + log.logType">
             <div class="log-header">
               <van-tag :type="getLogTypeTag(log.logType)" size="small">{{ getLogTypeName(log.logType) }}</van-tag>
               <span class="log-date">{{ log.logDate }}</span>
+            </div>
+            <div class="log-highlight" v-if="log.logType === 'fertilize' && log.fertilizer">
+              <van-icon name="balance-o" size="12" />
+              <span class="highlight-label">肥料：</span>
+              <span class="highlight-value">{{ log.fertilizer }}</span>
+            </div>
+            <div class="log-highlight" v-else-if="log.logType === 'prune' && log.position">
+              <van-icon name="scissors-o" size="12" />
+              <span class="highlight-label">部位：</span>
+              <span class="highlight-value">{{ log.position }}</span>
+            </div>
+            <div class="log-highlight" v-else-if="log.logType === 'repot' && log.soilType">
+              <van-icon name="exchange" size="12" />
+              <span class="highlight-label">盆土：</span>
+              <span class="highlight-value">{{ log.soilType }}</span>
             </div>
             <div class="log-title" v-if="log.title">{{ log.title }}</div>
             <div class="log-content" v-if="log.content">{{ log.content }}</div>
@@ -405,6 +420,75 @@ onMounted(() => {
   padding: var(--spacing-md);
   background: var(--color-bg-tertiary);
   border-radius: var(--radius-md);
+  border-left: 3px solid transparent;
+}
+
+.care-log-item.log-water {
+  border-left-color: #1989fa;
+}
+
+.care-log-item.log-fertilize {
+  border-left-color: #07c160;
+}
+
+.care-log-item.log-prune {
+  border-left-color: #ff976a;
+}
+
+.care-log-item.log-repot {
+  border-left-color: #ee0a24;
+}
+
+.care-log-item.log-other {
+  border-left-color: #969799;
+}
+
+.log-highlight {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-xs);
+  background: var(--color-bg-secondary);
+}
+
+.highlight-label {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+}
+
+.highlight-value {
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+}
+
+.log-fertilize .log-highlight {
+  background: rgba(7, 193, 96, 0.1);
+  color: #07c160;
+}
+
+.log-fertilize .highlight-value {
+  color: #07c160;
+}
+
+.log-prune .log-highlight {
+  background: rgba(255, 151, 106, 0.1);
+  color: #ff976a;
+}
+
+.log-prune .highlight-value {
+  color: #ff976a;
+}
+
+.log-repot .log-highlight {
+  background: rgba(238, 10, 36, 0.1);
+  color: #ee0a24;
+}
+
+.log-repot .highlight-value {
+  color: #ee0a24;
 }
 
 .log-header {

@@ -47,6 +47,18 @@ public class CareLog {
     @Column(length = 500)
     private String images;
 
+    @Size(max = 100, message = "肥料名称长度不能超过100个字符")
+    @Column(length = 100)
+    private String fertilizer;
+
+    @Size(max = 100, message = "修剪部位长度不能超过100个字符")
+    @Column(length = 100)
+    private String position;
+
+    @Size(max = 100, message = "盆土类型长度不能超过100个字符")
+    @Column(name = "soil_type", length = 100)
+    private String soilType;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

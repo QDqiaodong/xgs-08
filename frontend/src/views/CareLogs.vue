@@ -10,18 +10,7 @@
       <div class="content card">
         <van-tabs v-model:active="activeTab">
           <van-tab title="全部记录">
-            <div class="logs-list">
-              <div v-for="log in careLogs" :key="log.id" class="log-card">
-                <div class="log-header">
-                  <van-tag :type="getLogTypeTag(log.logType)" size="small">{{ getLogTypeName(log.logType) }}</van-tag>
-                  <span class="log-date">
-                    <van-icon name="clock-o" size="10" />
-                    {{ log.logDate }}
-                  </span>
-                </div>
-                <h3 class="log-title" v-if="log.title">{{ log.title }}</h3>
-                <p class="log-content" v-if="log.content">{{ log.content }}</p>
-              </div>
+            <div class="logs-by-type">
               <div v-if="careLogs.length === 0 && !loading" class="empty-state">
                 <van-icon name="notes-o" class="empty-icon" />
                 <span class="empty-text">暂无养护记录</span>
@@ -32,6 +21,54 @@
               <div v-if="loading" class="loading-wrapper">
                 <van-loading size="24px">加载中...</van-loading>
               </div>
+              <template v-else>
+                <div v-for="section in typeSections" :key="section.type" class="type-section" v-show="logsByType[section.type].length > 0">
+                  <div class="type-header" :style="{ borderLeftColor: section.color }">
+                    <div class="type-title">
+                      <van-icon :name="section.icon" size="18" :color="section.color" />
+                      <span class="type-name">{{ section.name }}</span>
+                      <span class="type-count">{{ logsByType[section.type].length }}条</span>
+                    </div>
+                  </div>
+                  <div class="type-logs">
+                    <div v-for="log in logsByType[section.type]" :key="log.id" class="log-card" :class="'log-' + log.logType">
+                      <div v-if="log.logType === 'water'" class="log-highlight water-highlight">
+                        <van-icon name="down" size="16" />
+                        <span class="highlight-label">浇水日期</span>
+                        <span class="highlight-value">{{ log.logDate }}</span>
+                      </div>
+                      <div v-else-if="log.logType === 'fertilize'" class="log-highlight fertilize-highlight">
+                        <van-icon name="balance-o" size="16" />
+                        <span class="highlight-label">肥料</span>
+                        <span class="highlight-value">{{ log.fertilizer || '未指定' }}</span>
+                      </div>
+                      <div v-else-if="log.logType === 'prune'" class="log-highlight prune-highlight">
+                        <van-icon name="scissors-o" size="16" />
+                        <span class="highlight-label">修剪部位</span>
+                        <span class="highlight-value">{{ log.position || '未指定' }}</span>
+                      </div>
+                      <div v-else-if="log.logType === 'repot'" class="log-highlight repot-highlight">
+                        <van-icon name="exchange" size="16" />
+                        <span class="highlight-label">盆土</span>
+                        <span class="highlight-value">{{ log.soilType || '未指定' }}</span>
+                      </div>
+                      <div v-else class="log-highlight other-highlight">
+                        <van-icon name="more-o" size="16" />
+                        <span class="highlight-label">日期</span>
+                        <span class="highlight-value">{{ log.logDate }}</span>
+                      </div>
+                      <h3 class="log-title" v-if="log.title">{{ log.title }}</h3>
+                      <p class="log-content" v-if="log.content">{{ log.content }}</p>
+                      <div class="log-footer">
+                        <span class="log-date">
+                          <van-icon name="clock-o" size="10" />
+                          {{ log.logDate }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </template>
             </div>
           </van-tab>
           <van-tab title="统计">
@@ -166,6 +203,38 @@
           @click="showTypePicker = true"
         />
         <van-field
+          v-if="logForm.logType === 'water'"
+          v-model="logForm.logDate"
+          label="浇水日期"
+          type="date"
+          placeholder="选择日期"
+        />
+        <van-field
+          v-else
+          v-model="logForm.logDate"
+          label="日期"
+          type="date"
+          placeholder="选择日期"
+        />
+        <van-field
+          v-if="logForm.logType === 'fertilize'"
+          v-model="logForm.fertilizer"
+          label="肥料"
+          placeholder="请输入肥料名称"
+        />
+        <van-field
+          v-if="logForm.logType === 'prune'"
+          v-model="logForm.position"
+          label="修剪部位"
+          placeholder="请输入修剪部位"
+        />
+        <van-field
+          v-if="logForm.logType === 'repot'"
+          v-model="logForm.soilType"
+          label="盆土"
+          placeholder="请输入盆土类型"
+        />
+        <van-field
           v-model="logForm.title"
           label="标题"
           placeholder="请输入标题（选填）"
@@ -176,12 +245,6 @@
           type="textarea"
           placeholder="记录养护详情..."
           :autosize="{ minHeight: 80 }"
-        />
-        <van-field
-          v-model="logForm.logDate"
-          label="日期"
-          type="date"
-          placeholder="选择日期"
         />
       </van-form>
     </van-dialog>
@@ -218,7 +281,10 @@ const logForm = reactive({
   logType: 'water',
   title: '',
   content: '',
-  logDate: new Date().toISOString().split('T')[0]
+  logDate: new Date().toISOString().split('T')[0],
+  fertilizer: '',
+  position: '',
+  soilType: ''
 })
 
 const logTypes = [
@@ -244,6 +310,32 @@ const stats = computed(() => {
 const groupedLogs = computed(() => {
   return groupLogsBySolarTerm(careLogs.value)
 })
+
+const logsByType = computed(() => {
+  const groups = {
+    water: [],
+    fertilize: [],
+    prune: [],
+    repot: [],
+    other: []
+  }
+  careLogs.value.forEach(log => {
+    if (groups.hasOwnProperty(log.logType)) {
+      groups[log.logType].push(log)
+    } else {
+      groups.other.push(log)
+    }
+  })
+  return groups
+})
+
+const typeSections = [
+  { type: 'water', name: '浇水', icon: 'down', color: '#1989fa' },
+  { type: 'fertilize', name: '施肥', icon: 'balance-o', color: '#07c160' },
+  { type: 'prune', name: '修剪', icon: 'scissors-o', color: '#ff976a' },
+  { type: 'repot', name: '换盆', icon: 'exchange', color: '#ee0a24' },
+  { type: 'other', name: '其他', icon: 'more-o', color: '#969799' }
+]
 
 const displaySeasons = computed(() => {
   if (selectedSeason.value === 'all') {
@@ -279,6 +371,9 @@ const getSeasonLogCount = (seasonData) => {
 const onTypeConfirm = ({ selectedOptions }) => {
   logForm.logType = selectedOptions[0].value
   selectedTypeName.value = selectedOptions[0].text
+  logForm.fertilizer = ''
+  logForm.position = ''
+  logForm.soilType = ''
   showTypePicker.value = false
 }
 
@@ -308,6 +403,9 @@ const submitLog = async () => {
     showAddDialog.value = false
     logForm.title = ''
     logForm.content = ''
+    logForm.fertilizer = ''
+    logForm.position = ''
+    logForm.soilType = ''
     loadLogs()
   } catch (e) {
     showToast('记录失败')
@@ -332,32 +430,143 @@ onMounted(() => {
   overflow: hidden;
 }
 
-.logs-list {
+.logs-by-type {
   padding: var(--spacing-md) 0;
   display: flex;
   flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.type-section {
+  display: flex;
+  flex-direction: column;
   gap: var(--spacing-sm);
+}
+
+.type-header {
+  padding-left: var(--spacing-sm);
+  border-left: 3px solid;
+}
+
+.type-title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.type-name {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.type-count {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  background: var(--color-bg-secondary);
+  padding: 2px 8px;
+  border-radius: var(--radius-xs);
+  margin-left: var(--spacing-xs);
+}
+
+.type-logs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  padding-left: var(--spacing-xs);
 }
 
 .log-card {
   background: var(--color-bg-tertiary);
   border-radius: var(--radius-md);
   padding: var(--spacing-md);
+  border-left: 3px solid transparent;
 }
 
-.log-header {
+.log-card.log-water {
+  border-left-color: #1989fa;
+}
+
+.log-card.log-fertilize {
+  border-left-color: #07c160;
+}
+
+.log-card.log-prune {
+  border-left-color: #ff976a;
+}
+
+.log-card.log-repot {
+  border-left-color: #ee0a24;
+}
+
+.log-card.log-other {
+  border-left-color: #969799;
+}
+
+.log-highlight {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-sm);
   margin-bottom: var(--spacing-sm);
+  font-size: var(--font-size-sm);
 }
 
-.log-date {
+.highlight-label {
+  color: var(--color-text-secondary);
   font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
-  display: flex;
-  align-items: center;
-  gap: 2px;
+}
+
+.highlight-value {
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-md);
+  flex: 1;
+}
+
+.water-highlight {
+  background: rgba(25, 137, 250, 0.1);
+  color: #1989fa;
+}
+
+.water-highlight .highlight-value {
+  color: #1989fa;
+}
+
+.fertilize-highlight {
+  background: rgba(7, 193, 96, 0.1);
+  color: #07c160;
+}
+
+.fertilize-highlight .highlight-value {
+  color: #07c160;
+}
+
+.prune-highlight {
+  background: rgba(255, 151, 106, 0.1);
+  color: #ff976a;
+}
+
+.prune-highlight .highlight-value {
+  color: #ff976a;
+}
+
+.repot-highlight {
+  background: rgba(238, 10, 36, 0.1);
+  color: #ee0a24;
+}
+
+.repot-highlight .highlight-value {
+  color: #ee0a24;
+}
+
+.other-highlight {
+  background: rgba(150, 151, 153, 0.1);
+  color: #969799;
+}
+
+.other-highlight .highlight-value {
+  color: #969799;
 }
 
 .log-title {
@@ -371,6 +580,20 @@ onMounted(() => {
   font-size: var(--font-size-base);
   color: var(--color-text-secondary);
   line-height: var(--line-height-lg);
+  margin-bottom: var(--spacing-sm);
+}
+
+.log-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.log-date {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  display: flex;
+  align-items: center;
+  gap: 2px;
 }
 
 .loading-wrapper {
