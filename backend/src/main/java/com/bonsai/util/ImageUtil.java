@@ -7,15 +7,29 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 @Component
 public class ImageUtil {
+
+    private static final Set<String> ALLOWED_EXTENSIONS = new HashSet<>(Arrays.asList(
+            ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"
+    ));
+
+    private static final Set<String> ALLOWED_MIME_TYPES = new HashSet<>(Arrays.asList(
+            "image/jpeg", "image/png", "image/gif", "image/bmp", "image/webp"
+    ));
+
+    private static final long MAX_FILE_SIZE = 10 * 1024 * 1024;
 
     @Value("${bonsai.upload.path}")
     private String uploadPath;
@@ -32,10 +46,89 @@ public class ImageUtil {
     @Value("${bonsai.image.quality}")
     private double quality;
 
+    private void validateImageFile(MultipartFile file) throws IOException {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("文件不能为空");
+        }
+
+        String originalFilename = file.getOriginalFilename();
+        if (originalFilename == null || originalFilename.trim().isEmpty()) {
+            throw new IllegalArgumentException("文件名不能为空");
+        }
+
+        if (originalFilename.contains("..") || originalFilename.contains("/") || originalFilename.contains("\\")) {
+            throw new IllegalArgumentException("文件名包含非法字符");
+        }
+
+        int lastDotIndex = originalFilename.lastIndexOf(".");
+        if (lastDotIndex == -1 || lastDotIndex == originalFilename.length() - 1) {
+            throw new IllegalArgumentException("文件缺少合法扩展名");
+        }
+
+        String extension = originalFilename.substring(lastDotIndex).toLowerCase();
+        if (!ALLOWED_EXTENSIONS.contains(extension)) {
+            throw new IllegalArgumentException("不支持的文件扩展名: " + extension + "，仅支持 " + ALLOWED_EXTENSIONS);
+        }
+
+        String contentType = file.getContentType();
+        if (contentType != null && !ALLOWED_MIME_TYPES.contains(contentType.toLowerCase())) {
+            throw new IllegalArgumentException("不支持的文件类型: " + contentType);
+        }
+
+        if (file.getSize() > MAX_FILE_SIZE) {
+            throw new IllegalArgumentException("文件大小超过限制，最大支持 10MB");
+        }
+
+        validateMagicNumber(file, extension);
+    }
+
+    private void validateMagicNumber(MultipartFile file, String extension) throws IOException {
+        byte[] header = new byte[12];
+        try (InputStream is = file.getInputStream()) {
+            int read = is.read(header);
+            if (read < 4) {
+                throw new IllegalArgumentException("文件内容异常，无法识别文件类型");
+            }
+        }
+
+        boolean valid = false;
+        switch (extension) {
+            case ".jpg":
+            case ".jpeg":
+                valid = (header[0] & 0xFF) == 0xFF && (header[1] & 0xFF) == 0xD8 && (header[2] & 0xFF) == 0xFF;
+                break;
+            case ".png":
+                valid = (header[0] & 0xFF) == 0x89 && (header[1] & 0xFF) == 0x50
+                        && (header[2] & 0xFF) == 0x4E && (header[3] & 0xFF) == 0x47;
+                break;
+            case ".gif":
+                valid = (header[0] & 0xFF) == 0x47 && (header[1] & 0xFF) == 0x49
+                        && (header[2] & 0xFF) == 0x46 && (header[3] & 0xFF) == 0x38;
+                break;
+            case ".bmp":
+                valid = (header[0] & 0xFF) == 0x42 && (header[1] & 0xFF) == 0x4D;
+                break;
+            case ".webp":
+                valid = (header[0] & 0xFF) == 0x52 && (header[1] & 0xFF) == 0x49
+                        && (header[2] & 0xFF) == 0x46 && (header[3] & 0xFF) == 0x46
+                        && (header[8] & 0xFF) == 0x57 && (header[9] & 0xFF) == 0x45
+                        && (header[10] & 0xFF) == 0x42 && (header[11] & 0xFF) == 0x50;
+                break;
+            default:
+                valid = false;
+        }
+
+        if (!valid) {
+            throw new IllegalArgumentException("文件真实内容与扩展名不匹配，请上传合法的图片文件");
+        }
+    }
+
     public String[] uploadImage(MultipartFile file) throws IOException {
+        validateImageFile(file);
+
         String datePath = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd"));
         String originalFilename = file.getOriginalFilename();
-        String extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+        String extension = originalFilename.substring(originalFilename.lastIndexOf(".")).toLowerCase();
         String fileName = UUID.randomUUID().toString() + extension;
 
         Path originalDir = Paths.get(uploadPath, "original", datePath);

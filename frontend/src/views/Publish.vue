@@ -131,6 +131,7 @@ import { showToast } from 'vant'
 import { createPost } from '@/api/post'
 import { getCategoriesByType } from '@/api/category'
 import { useUserStore } from '@/stores/user'
+import { validateImageFile } from '@/api/upload'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -181,15 +182,7 @@ const onStyleConfirm = ({ selectedOptions }) => {
 }
 
 const beforeRead = (file) => {
-  if (file.type && !file.type.startsWith('image/')) {
-    showToast('请选择图片文件')
-    return false
-  }
-  if (file.size > 10 * 1024 * 1024) {
-    showToast('图片大小不能超过 10MB')
-    return false
-  }
-  return true
+  return validateImageFile(file)
 }
 
 const afterRead = (file) => {
@@ -203,6 +196,16 @@ const afterRead = (file) => {
 const onSubmit = async () => {
   if (fileList.value.length === 0) {
     showToast('请至少上传一张图片')
+    return
+  }
+  const uploadingFile = fileList.value.find(f => f.status === 'uploading')
+  if (uploadingFile) {
+    showToast('图片正在处理中，请稍候')
+    return
+  }
+  const failedFile = fileList.value.find(f => f.status === 'failed')
+  if (failedFile) {
+    showToast('存在上传失败的图片，请重新上传')
     return
   }
 

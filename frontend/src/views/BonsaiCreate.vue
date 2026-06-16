@@ -134,6 +134,7 @@ import { showToast } from 'vant'
 import { createBonsai } from '@/api/bonsai'
 import { getCategoriesByType } from '@/api/category'
 import { useUserStore } from '@/stores/user'
+import { validateImageFile, uploadSingleImage } from '@/api/upload'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -175,30 +176,39 @@ const onSpeciesConfirm = ({ selectedOptions }) => {
 }
 
 const beforeRead = (file) => {
-  if (file.type && !file.type.startsWith('image/')) {
-    showToast('请选择图片文件')
-    return false
-  }
-  if (file.size > 10 * 1024 * 1024) {
-    showToast('图片大小不能超过 10MB')
-    return false
-  }
-  return true
+  return validateImageFile(file)
 }
 
-const afterRead = (file) => {
+const afterRead = async (file) => {
   file.status = 'uploading'
   file.message = '上传中...'
-  setTimeout(() => {
+  try {
+    await uploadSingleImage(file)
     file.status = 'done'
-  }, 500)
+    file.message = ''
+  } catch (e) {
+    file.status = 'failed'
+    file.message = '上传失败'
+    showToast(e?.response?.data?.message || e?.message || '图片上传失败')
+  }
 }
 
 const onSubmit = async () => {
+  const uploadingFile = fileList.value.find(f => f.status === 'uploading')
+  if (uploadingFile) {
+    showToast('图片正在上传中，请稍候')
+    return
+  }
+  const failedFile = fileList.value.find(f => f.status === 'failed')
+  if (failedFile) {
+    showToast('存在上传失败的图片，请重新上传')
+    return
+  }
+
   submitting.value = true
   try {
-    if (fileList.value.length > 0 && fileList.value[0].content) {
-      form.coverImage = fileList.value[0].content
+    if (fileList.value.length > 0 && fileList.value[0].uploadedUrl) {
+      form.coverImage = fileList.value[0].uploadedUrl
     }
 
     const data = {
@@ -212,7 +222,7 @@ const onSubmit = async () => {
       router.replace(`/bonsais/${result.id}`)
     }, 1000)
   } catch (e) {
-    showToast('添加失败')
+    showToast(e?.response?.data?.message || e?.message || '添加失败')
   } finally {
     submitting.value = false
   }

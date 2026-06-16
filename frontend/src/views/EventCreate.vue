@@ -103,6 +103,7 @@ import { ref, reactive } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { showToast } from 'vant'
 import { createEvent } from '@/api/lifecycleEvent'
+import { validateImageFile, uploadSingleImage } from '@/api/upload'
 
 const router = useRouter()
 const route = useRoute()
@@ -139,34 +140,44 @@ const onTypeConfirm = ({ selectedOptions }) => {
 }
 
 const beforeRead = (file) => {
-  if (file.type && !file.type.startsWith('image/')) {
-    showToast('请选择图片文件')
-    return false
-  }
-  if (file.size > 10 * 1024 * 1024) {
-    showToast('图片大小不能超过 10MB')
-    return false
-  }
-  return true
+  return validateImageFile(file)
 }
 
-const afterRead = (file, type = 'after') => {
+const afterRead = async (file, type = 'after') => {
   file.status = 'uploading'
   file.message = '上传中...'
-  setTimeout(() => {
+  try {
+    await uploadSingleImage(file)
     file.status = 'done'
-  }, 500)
+    file.message = ''
+  } catch (e) {
+    file.status = 'failed'
+    file.message = '上传失败'
+    showToast(e?.response?.data?.message || e?.message || '图片上传失败')
+  }
 }
 
 const onSubmit = async () => {
+  const allFiles = [...beforeFileList.value, ...afterFileList.value]
+  const uploadingFile = allFiles.find(f => f.status === 'uploading')
+  if (uploadingFile) {
+    showToast('图片正在上传中，请稍候')
+    return
+  }
+  const failedFile = allFiles.find(f => f.status === 'failed')
+  if (failedFile) {
+    showToast('存在上传失败的图片，请重新上传')
+    return
+  }
+
   submitting.value = true
   try {
-    const afterImages = afterFileList.value.map(f => f.content).filter(Boolean)
+    const afterImages = afterFileList.value.map(f => f.uploadedUrl).filter(Boolean)
     if (afterImages.length > 0) {
       form.images = JSON.stringify(afterImages)
     }
 
-    const beforeImages = beforeFileList.value.map(f => f.content).filter(Boolean)
+    const beforeImages = beforeFileList.value.map(f => f.uploadedUrl).filter(Boolean)
     if (beforeImages.length > 0) {
       form.beforeImages = JSON.stringify(beforeImages)
     }
@@ -182,7 +193,7 @@ const onSubmit = async () => {
       router.back()
     }, 1000)
   } catch (e) {
-    showToast('记录失败')
+    showToast(e?.response?.data?.message || e?.message || '记录失败')
   } finally {
     submitting.value = false
   }
