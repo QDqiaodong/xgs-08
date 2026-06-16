@@ -19,14 +19,28 @@
             <van-icon name="fire-o" size="10" />
             <span>热门</span>
           </div>
-          <div v-if="post.species" class="species-tag">
-            {{ post.species.name }}
+          <div class="cover-overlay">
+            <div v-if="post.species" class="cover-species">
+              <van-icon name="flower-o" size="12" />
+              <span class="species-name">{{ post.species.name }}</span>
+            </div>
+            <div v-if="post.treeAge" class="cover-tree-age">
+              <van-icon name="clock-o" size="12" />
+              <span>{{ post.treeAge }}年</span>
+            </div>
           </div>
         </div>
         <div class="post-content">
           <h3 class="post-title text-ellipsis-2">{{ post.title }}</h3>
-          <div v-if="post.style" class="post-style">
-            <van-tag size="mini" type="primary" plain>{{ post.style.name }}</van-tag>
+          <div class="post-tags" v-if="hasPostTags(post)">
+            <div v-if="post.style" class="post-tag tag-style">
+              <van-icon name="star-o" size="10" />
+              <span>{{ post.style.name }}</span>
+            </div>
+            <div v-if="post.potType" class="post-tag tag-pot">
+              <van-icon name="balance-o" size="10" />
+              <span class="text-ellipsis">{{ post.potType }}</span>
+            </div>
           </div>
           <div class="post-footer">
             <div class="post-meta">
@@ -106,6 +120,10 @@ const formatCount = (count) => {
     return (count / 1000).toFixed(1) + 'k'
   }
   return count
+}
+
+const hasPostTags = (post) => {
+  return post && (post.style || post.potType)
 }
 
 const onImageLoad = (postId, event) => {
@@ -206,20 +224,42 @@ watch(() => props.posts.length, () => {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
-.species-tag {
+.cover-overlay {
   position: absolute;
-  top: var(--spacing-xs);
-  right: var(--spacing-xs);
-  background: rgba(0, 0, 0, 0.6);
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 24px var(--spacing-xs) var(--spacing-xs);
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.3) 50%, transparent 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cover-species {
+  display: flex;
+  align-items: center;
+  gap: 3px;
   color: #fff;
-  font-size: var(--font-size-xs);
-  padding: 2px 6px;
-  border-radius: var(--radius-xs);
-  backdrop-filter: blur(4px);
-  max-width: 80px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.cover-species .species-name {
+  max-width: 100px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.cover-tree-age {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: var(--font-size-xs);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 .post-content {
@@ -235,8 +275,37 @@ watch(() => props.posts.length, () => {
   min-height: 42px;
 }
 
-.post-style {
+.post-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
   margin-bottom: var(--spacing-xs);
+}
+
+.post-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.5;
+  max-width: 100%;
+}
+
+.tag-style {
+  background: linear-gradient(135deg, #e8f3ea 0%, #d4edda 100%);
+  color: var(--color-primary);
+}
+
+.tag-pot {
+  background: linear-gradient(135deg, #fff4e6 0%, #ffe4c4 100%);
+  color: #d48806;
+}
+
+.tag-pot span {
+  max-width: 60px;
 }
 
 .post-footer {
