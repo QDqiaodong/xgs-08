@@ -165,4 +165,32 @@ public class ImageUtil {
         } catch (Exception e) {
         }
     }
+
+    public void deleteImages(String imagesStr) {
+        if (imagesStr == null || imagesStr.trim().isEmpty()) {
+            return;
+        }
+        for (String imageUrl : parseImages(imagesStr)) {
+            deleteImage(imageUrl);
+        }
+    }
+
+    public String[] parseImages(String imagesStr) {
+        if (imagesStr == null || imagesStr.trim().isEmpty()) {
+            return new String[0];
+        }
+        try {
+            String trimmed = imagesStr.trim();
+            if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+                return new com.fasterxml.jackson.databind.ObjectMapper()
+                        .readValue(trimmed, String[].class);
+            }
+            if (trimmed.contains(",")) {
+                return trimmed.split(",");
+            }
+            return new String[]{trimmed};
+        } catch (Exception e) {
+            return new String[]{imagesStr};
+        }
+    }
 }

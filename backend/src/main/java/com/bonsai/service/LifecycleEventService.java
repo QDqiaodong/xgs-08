@@ -2,8 +2,10 @@ package com.bonsai.service;
 
 import com.bonsai.entity.LifecycleEvent;
 import com.bonsai.repository.LifecycleEventRepository;
+import com.bonsai.util.ImageUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Set;
@@ -17,6 +19,7 @@ public class LifecycleEventService {
     );
 
     private final LifecycleEventRepository lifecycleEventRepository;
+    private final ImageUtil imageUtil;
 
     public List<LifecycleEvent> getEventsByBonsaiId(Long bonsaiId) {
         return lifecycleEventRepository.findByBonsaiIdOrderByEventDateAsc(bonsaiId);
@@ -36,7 +39,16 @@ public class LifecycleEventService {
         return lifecycleEventRepository.save(event);
     }
 
+    @Transactional
     public void deleteEvent(Long id) {
+        LifecycleEvent event = lifecycleEventRepository.findById(id).orElse(null);
+        if (event == null) {
+            return;
+        }
+
+        imageUtil.deleteImages(event.getImages());
+        imageUtil.deleteImages(event.getBeforeImages());
+
         lifecycleEventRepository.deleteById(id);
     }
 

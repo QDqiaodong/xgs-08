@@ -1,8 +1,10 @@
 package com.bonsai.service;
 
 import com.bonsai.entity.Bonsai;
+import com.bonsai.entity.LifecycleEvent;
 import com.bonsai.repository.BonsaiRepository;
 import com.bonsai.repository.LifecycleEventRepository;
+import com.bonsai.util.ImageUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -19,6 +21,7 @@ public class BonsaiService {
 
     private final BonsaiRepository bonsaiRepository;
     private final LifecycleEventRepository lifecycleEventRepository;
+    private final ImageUtil imageUtil;
 
     public Page<Bonsai> getUserBonsais(Long userId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
@@ -45,6 +48,20 @@ public class BonsaiService {
 
     @Transactional
     public void deleteBonsai(Long id) {
+        Bonsai bonsai = bonsaiRepository.findById(id).orElse(null);
+        if (bonsai == null) {
+            return;
+        }
+
+        List<LifecycleEvent> events = lifecycleEventRepository.findByBonsaiIdOrderByEventDateAsc(id);
+
+        imageUtil.deleteImages(bonsai.getCoverImage());
+
+        for (LifecycleEvent event : events) {
+            imageUtil.deleteImages(event.getImages());
+            imageUtil.deleteImages(event.getBeforeImages());
+        }
+
         lifecycleEventRepository.deleteByBonsaiId(id);
         bonsaiRepository.deleteById(id);
     }

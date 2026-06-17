@@ -102,6 +102,20 @@
                   <div class="stat-value">{{ stats.prune }}</div>
                   <div class="stat-label">修剪</div>
                 </div>
+                <div class="stat-item card repot">
+                  <div class="stat-icon">
+                    <van-icon name="exchange" size="24" color="#ee0a24" />
+                  </div>
+                  <div class="stat-value">{{ stats.repot }}</div>
+                  <div class="stat-label">换盆</div>
+                </div>
+                <div class="stat-item card other">
+                  <div class="stat-icon">
+                    <van-icon name="more-o" size="24" color="#969799" />
+                  </div>
+                  <div class="stat-value">{{ stats.other }}</div>
+                  <div class="stat-label">其他</div>
+                </div>
               </div>
             </div>
           </van-tab>
@@ -302,6 +316,8 @@ const stats = computed(() => {
   careLogs.value.forEach(log => {
     if (result.hasOwnProperty(log.logType)) {
       result[log.logType]++
+    } else {
+      result.other++
     }
   })
   return result
@@ -399,14 +415,14 @@ const submitLog = async () => {
       userId: userStore.currentUser.id,
       ...logForm
     })
-    showToast('记录成功')
     showAddDialog.value = false
     logForm.title = ''
     logForm.content = ''
     logForm.fertilizer = ''
     logForm.position = ''
     logForm.soilType = ''
-    loadLogs()
+    await loadLogs()
+    showToast('记录成功')
   } catch (e) {
     showToast('记录失败')
   }
@@ -608,7 +624,7 @@ onMounted(() => {
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: var(--spacing-md);
 }
 
@@ -665,6 +681,22 @@ onMounted(() => {
 
 .stat-item.prune .stat-value {
   color: #ff976a;
+}
+
+.stat-item.repot .stat-icon {
+  background: rgba(238, 10, 36, 0.1);
+}
+
+.stat-item.repot .stat-value {
+  color: #ee0a24;
+}
+
+.stat-item.other .stat-icon {
+  background: rgba(150, 151, 153, 0.1);
+}
+
+.stat-item.other .stat-value {
+  color: #969799;
 }
 
 .solar-term-view {
