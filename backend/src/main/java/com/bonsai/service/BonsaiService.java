@@ -1,9 +1,16 @@
 package com.bonsai.service;
 
+import com.bonsai.dto.UserBonsaiProfile;
 import com.bonsai.entity.Bonsai;
+import com.bonsai.entity.CareLog;
+import com.bonsai.entity.Category;
 import com.bonsai.entity.LifecycleEvent;
+import com.bonsai.entity.Post;
+import com.bonsai.entity.PostImage;
 import com.bonsai.repository.BonsaiRepository;
+import com.bonsai.repository.CareLogRepository;
 import com.bonsai.repository.LifecycleEventRepository;
+import com.bonsai.repository.PostRepository;
 import com.bonsai.util.ImageUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -13,7 +20,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -21,6 +32,8 @@ public class BonsaiService {
 
     private final BonsaiRepository bonsaiRepository;
     private final LifecycleEventRepository lifecycleEventRepository;
+    private final CareLogRepository careLogRepository;
+    private final PostRepository postRepository;
     private final ImageUtil imageUtil;
 
     public Page<Bonsai> getUserBonsais(Long userId, int page, int size) {
@@ -94,5 +107,62 @@ public class BonsaiService {
         if (bonsai.getViewCount() < 0) {
             throw new IllegalArgumentException("浏览次数不能为负数");
         }
+    }
+
+    public UserBonsaiProfile getUserBonsaiProfile(Long userId) {
+        UserBonsaiProfile profile = new UserBonsaiProfile();
+
+        List<Bonsai> bonsais = bonsaiRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        profile.setBonsaiCount(bonsais.size());
+
+        if (!bonsais.isEmpty()) {
+            Map<String, Long> speciesCount = bonsais.stream()
+                    .filter(b -> b.getSpecies() != null)
+                    .collect(Collectors.groupingBy(
+                            b -> b.getSpecies().getName(),
+                            Collectors.counting()
+                    ));
+
+            String mainSpecies = speciesCount.entrySet().stream()
+                    .max(Map.Entry.comparingByValue())
+                    .map(Map.Entry::getKey)
+                    .orElse(null);
+            profile.setMainSpecies(mainSpecies);
+
+            Map<String, Long> styleCount = bonsais.stream()
+                    .filter(b -> b.getTrunkShape() != null && !b.getTrunkShape().trim().isEmpty())
+                    .collect(Collectors.groupingBy(
+                            Bonsai::getTrunkShape,
+                            Collectors.counting()
+                    ));
+
+            String commonStyle = styleCount.entrySet().stream()
+                    .max(Map.Entry.comparingByValue())
+                    .map(Map.Entry::getKey)
+                    .orElse(null);
+            profile.setCommonStyle(commonStyle);
+        }
+
+        List<CareLog> recentLogs = careLogRepository.findTop1ByUserIdOrderByLogDateDesc(userId);
+        if (!recentLogs.isEmpty()) {
+            profile.setLastCareDate(recentLogs.get(0).getLogDate());
+        }
+
+        Pageable topOne = PageRequest.of(0, 1);
+        List<Post> topPosts = postRepository.findTopByUserIdOrderByPopularity(userId, topOne);
+        if (!topPosts.isEmpty()) {
+            Post topPost = topPosts.get(0);
+            profile.setRepresentativeWorkId(topPost.getId());
+            profile.setRepresentativeWorkTitle(topPost.getTitle());
+
+            String coverImage = Optional.ofNullable(topPost.getImages())
+                    .filter(images -> !images.isEmpty())
+                    .map(images -> images.get(0))
+                    .map(PostImage::getImageUrl)
+                    .orElse(null);
+            profile.setRepresentativeWorkImage(coverImage);
+        }
+
+        return profile;
     }
 }

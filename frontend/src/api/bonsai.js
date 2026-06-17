@@ -8,6 +8,10 @@ export function getUserBonsaiList(userId) {
   return request.get(`/bonsais/user/${userId}/list`)
 }
 
+export function getUserBonsaiProfile(userId) {
+  return request.get(`/bonsais/user/${userId}/profile`)
+}
+
 export function getBonsaiById(id) {
   return request.get(`/bonsais/${id}`)
 }

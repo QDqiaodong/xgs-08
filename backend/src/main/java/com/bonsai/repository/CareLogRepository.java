@@ -12,4 +12,5 @@ import java.util.List;
 public interface CareLogRepository extends JpaRepository<CareLog, Long> {
     Page<CareLog> findByUserIdOrderByLogDateDesc(Long userId, Pageable pageable);
     List<CareLog> findByPostIdOrderByLogDateDesc(Long postId);
+    List<CareLog> findTop1ByUserIdOrderByLogDateDesc(Long userId);
 }

@@ -28,4 +28,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
     @Query("SELECT p FROM Post p WHERE p.status = 1 AND p.userId = :userId ORDER BY p.createdAt DESC")
     Page<Post> findByUserId(@Param("userId") Long userId, Pageable pageable);
+
+    @Query("SELECT p FROM Post p WHERE p.status = 1 AND p.userId = :userId ORDER BY p.likeCount DESC, p.viewCount DESC")
+    List<Post> findTopByUserIdOrderByPopularity(@Param("userId") Long userId, Pageable pageable);
 }

@@ -1,6 +1,7 @@
 package com.bonsai.controller;
 
 import com.bonsai.dto.Result;
+import com.bonsai.dto.UserBonsaiProfile;
 import com.bonsai.entity.Bonsai;
 import com.bonsai.service.BonsaiService;
 import jakarta.validation.Valid;
@@ -28,6 +29,11 @@ public class BonsaiController {
     @GetMapping("/user/{userId}/list")
     public Result<List<Bonsai>> getUserBonsaiList(@PathVariable Long userId) {
         return Result.success(bonsaiService.getUserBonsaiList(userId));
+    }
+
+    @GetMapping("/user/{userId}/profile")
+    public Result<UserBonsaiProfile> getUserBonsaiProfile(@PathVariable Long userId) {
+        return Result.success(bonsaiService.getUserBonsaiProfile(userId));
     }
 
     @GetMapping("/{id}")

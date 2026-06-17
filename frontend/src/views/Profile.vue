@@ -24,6 +24,72 @@
       </div>
     </div>
 
+    <div class="bonsai-archive">
+      <div class="archive-header">
+        <div class="archive-title-row">
+          <van-icon name="flower-o" size="16" />
+          <span class="archive-title">盆景档案</span>
+        </div>
+        <span class="archive-count" v-if="bonsaiProfile?.bonsaiCount">
+          共 {{ bonsaiProfile.bonsaiCount }} 盆
+        </span>
+      </div>
+
+      <div class="archive-content">
+        <div class="archive-info">
+          <div class="info-item">
+            <div class="info-label">
+              <van-icon name="label-o" size="12" />
+              <span>主要树种</span>
+            </div>
+            <div class="info-value">
+              {{ bonsaiProfile?.mainSpecies || '暂无数据' }}
+            </div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">
+              <van-icon name="paint-palette-o" size="12" />
+              <span>常用造型</span>
+            </div>
+            <div class="info-value">
+              {{ bonsaiProfile?.commonStyle || '暂无数据' }}
+            </div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">
+              <van-icon name="clock-o" size="12" />
+              <span>最近养护</span>
+            </div>
+            <div class="info-value">
+              {{ bonsaiProfile?.lastCareDate || '暂无数据' }}
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="representative-work"
+          v-if="bonsaiProfile?.representativeWorkImage"
+          @click="goRepresentativeWork"
+        >
+          <div class="work-cover">
+            <img
+              :src="bonsaiProfile.representativeWorkImage"
+              :alt="bonsaiProfile.representativeWorkTitle"
+            />
+          </div>
+          <div class="work-info">
+            <van-icon name="star-o" size="10" />
+            <span class="work-label">代表作品</span>
+          </div>
+          <div class="work-title">{{ bonsaiProfile.representativeWorkTitle }}</div>
+        </div>
+        <div class="representative-work empty-work" v-else>
+          <van-icon name="photo-o" size="24" class="empty-icon" />
+          <span class="empty-text">暂无代表作品</span>
+        </div>
+      </div>
+    </div>
+
     <div class="content-wrapper">
       <div class="content card">
         <van-tabs v-model:active="activeTab" sticky>
@@ -103,6 +169,7 @@ import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import { getUserPosts } from '@/api/post'
 import { getUserCareLogs } from '@/api/careLog'
+import { getUserBonsaiProfile } from '@/api/bonsai'
 import { useUserStore } from '@/stores/user'
 import { getCoverImage, PLACEHOLDER_SVG } from '@/utils/image'
 
@@ -118,6 +185,7 @@ const postCount = ref(0)
 const likeCount = ref(0)
 const logCount = ref(0)
 const coverErrors = ref({})
+const bonsaiProfile = ref(null)
 
 const formatCount = (count) => {
   if (!count) return 0
@@ -188,9 +256,25 @@ const loadMyLogs = async () => {
   }
 }
 
+const loadBonsaiProfile = async () => {
+  try {
+    const data = await getUserBonsaiProfile(user.value.id)
+    bonsaiProfile.value = data
+  } catch (e) {
+    console.error('加载盆景档案失败', e)
+  }
+}
+
+const goRepresentativeWork = () => {
+  if (bonsaiProfile.value?.representativeWorkId) {
+    router.push(`/post/${bonsaiProfile.value.representativeWorkId}`)
+  }
+}
+
 onMounted(() => {
   loadMyPosts()
   loadMyLogs()
+  loadBonsaiProfile()
 })
 </script>
 
@@ -266,9 +350,153 @@ onMounted(() => {
   opacity: 0.9;
 }
 
+.bonsai-archive {
+  margin: var(--spacing-md);
+  background: #fff;
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  position: relative;
+  z-index: 2;
+}
+
+.archive-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-md);
+}
+
+.archive-title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  color: var(--color-primary);
+}
+
+.archive-title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+}
+
+.archive-count {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+  background: var(--color-bg-secondary);
+  padding: 2px var(--spacing-sm);
+  border-radius: var(--radius-sm);
+}
+
+.archive-content {
+  display: flex;
+  gap: var(--spacing-md);
+}
+
+.archive-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.info-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+.info-value {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  padding-left: 16px;
+}
+
+.representative-work {
+  width: 100px;
+  flex-shrink: 0;
+  position: relative;
+  cursor: pointer;
+  transition: transform var(--transition-fast);
+}
+
+.representative-work:active {
+  transform: scale(0.98);
+}
+
+.work-cover {
+  width: 100px;
+  height: 100px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-bg-secondary);
+}
+
+.work-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.work-info {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: rgba(255, 193, 7, 0.9);
+  color: #fff;
+  font-size: var(--font-size-xs);
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  backdrop-filter: blur(4px);
+}
+
+.work-title {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-primary);
+  margin-top: var(--spacing-xs);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.empty-work {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-md);
+  cursor: default;
+}
+
+.empty-work:active {
+  transform: none;
+}
+
+.empty-work .empty-icon {
+  color: var(--color-text-tertiary);
+  margin-bottom: var(--spacing-xs);
+}
+
+.empty-work .empty-text {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
 .content-wrapper {
-  padding: var(--spacing-md);
-  margin-top: calc(-1 * var(--spacing-md));
+  padding: 0 var(--spacing-md) var(--spacing-md);
   position: relative;
   z-index: 1;
 }
