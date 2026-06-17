@@ -116,19 +116,38 @@
       </van-form>
     </div>
 
-    <van-popup v-model:show="showSpeciesPicker" position="bottom">
-      <van-picker
-        :columns="speciesColumns"
-        title="选择树种"
-        @confirm="onSpeciesConfirm"
-        @cancel="showSpeciesPicker = false"
-      />
+    <van-popup v-model:show="showSpeciesPicker" position="bottom" round :style="{ height: '60%' }">
+      <div class="picker-popup">
+        <div class="picker-popup-header">
+          <van-button type="default" size="small" @click="showSpeciesPicker = false">取消</van-button>
+          <span class="picker-title">选择树种</span>
+          <van-button type="primary" size="small" @click="confirmSpecies">确定</van-button>
+        </div>
+        <div class="picker-popup-content">
+          <div class="picker-option-group" v-for="group in speciesGroups" :key="group.name">
+            <div class="group-title">{{ group.name }}</div>
+            <div class="group-options">
+              <van-tag
+                v-for="item in group.items"
+                :key="item.value"
+                :type="tempSpeciesId === item.value ? 'primary' : 'default'"
+                size="medium"
+                plain
+                :class="{ 'tag-selected': tempSpeciesId === item.value }"
+                @click="tempSpeciesId = item.value; tempSpeciesName = item.text"
+              >
+                <span v-if="item.icon">{{ item.icon }} </span>{{ item.text }}
+              </van-tag>
+            </div>
+          </div>
+        </div>
+      </div>
     </van-popup>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import { createBonsai } from '@/api/bonsai'
@@ -157,21 +176,39 @@ const fileList = ref([])
 const submitting = ref(false)
 const showSpeciesPicker = ref(false)
 const speciesList = ref([])
-const speciesColumns = ref([])
+const tempSpeciesId = ref(null)
+const tempSpeciesName = ref('')
 const selectedSpeciesName = ref('')
+
+const speciesGroups = computed(() => {
+  const groups = new Map()
+  speciesList.value.forEach(s => {
+    const groupName = s.groupName || '其他'
+    if (!groups.has(groupName)) {
+      groups.set(groupName, [])
+    }
+    groups.get(groupName).push({
+      text: s.name,
+      value: s.id,
+      icon: s.icon
+    })
+  })
+  return Array.from(groups.entries()).map(([name, items]) => ({ name, items }))
+})
 
 const loadCategories = async () => {
   try {
     speciesList.value = await getCategoriesByType('species')
-    speciesColumns.value = speciesList.value.map(s => ({ text: s.name, value: s.id }))
   } catch (e) {
     console.error('加载分类失败', e)
   }
 }
 
-const onSpeciesConfirm = ({ selectedOptions }) => {
-  form.speciesId = selectedOptions[0].value
-  selectedSpeciesName.value = selectedOptions[0].text
+const confirmSpecies = () => {
+  if (tempSpeciesId.value !== null) {
+    form.speciesId = tempSpeciesId.value
+    selectedSpeciesName.value = tempSpeciesName.value
+  }
   showSpeciesPicker.value = false
 }
 
@@ -276,5 +313,81 @@ onMounted(() => {
   padding-left: 8px;
   border-left: 3px solid #07c160;
   margin-bottom: 12px;
+}
+
+.picker-popup {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+}
+
+.picker-popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid #ebedf0;
+}
+
+.picker-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #323233;
+}
+
+.picker-popup-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.picker-option-group {
+  margin-bottom: 20px;
+}
+
+.picker-option-group:last-child {
+  margin-bottom: 0;
+}
+
+.picker-option-group .group-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #646566;
+  margin-bottom: 12px;
+  padding-left: 8px;
+  border-left: 3px solid #07c160;
+}
+
+.picker-option-group .group-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.picker-option-group :deep(.van-tag) {
+  padding: 8px 16px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-width: 1px;
+}
+
+.picker-option-group :deep(.van-tag--plain) {
+  background: #f7f8fa;
+  border-color: #ebedf0;
+  color: #646566;
+}
+
+.picker-option-group :deep(.van-tag--primary.van-tag--plain) {
+  background: #e8f3ea;
+  border-color: #07c160;
+  color: #07c160;
+}
+
+.tag-selected {
+  background: #e8f3ea !important;
+  border-color: #07c160 !important;
+  color: #07c160 !important;
 }
 </style>

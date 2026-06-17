@@ -13,12 +13,95 @@
       </van-tabs>
 
       <div class="category-filter">
-        <van-dropdown-menu>
-          <van-dropdown-item v-model="selectedSpecies" :options="speciesOptions" @change="filterPosts" />
-          <van-dropdown-item v-model="selectedStyle" :options="styleOptions" @change="filterPosts" />
-        </van-dropdown-menu>
+        <div class="filter-buttons">
+          <div
+            class="filter-btn"
+            :class="{ active: showSpeciesFilter }"
+            @click="toggleSpeciesFilter"
+          >
+            <span>{{ selectedSpeciesText }}</span>
+            <van-icon :name="showSpeciesFilter ? 'arrow-up' : 'arrow-down'" />
+          </div>
+          <div
+            class="filter-btn"
+            :class="{ active: showStyleFilter }"
+            @click="toggleStyleFilter"
+          >
+            <span>{{ selectedStyleText }}</span>
+            <van-icon :name="showStyleFilter ? 'arrow-up' : 'arrow-down'" />
+          </div>
+        </div>
       </div>
     </div>
+
+    <van-popup
+      v-model:show="showSpeciesFilter"
+      position="top"
+      round
+      :style="{ height: '60%' }"
+    >
+      <div class="filter-popup">
+        <div class="filter-popup-header">
+          <span class="filter-title">选择树种</span>
+          <van-button type="primary" size="small" plain @click="clearSpeciesFilter">重置</van-button>
+        </div>
+        <div class="filter-popup-content">
+          <div class="filter-option-group" v-for="group in speciesGroups" :key="group.name">
+            <div class="group-title">{{ group.name }}</div>
+            <div class="group-options">
+              <van-tag
+                v-for="item in group.items"
+                :key="item.value"
+                :type="selectedSpecies === item.value ? 'primary' : 'default'"
+                size="medium"
+                plain
+                :class="{ 'tag-selected': selectedSpecies === item.value }"
+                @click="selectSpecies(item.value)"
+              >
+                <span v-if="item.icon">{{ item.icon }} </span>{{ item.text }}
+              </van-tag>
+            </div>
+          </div>
+        </div>
+      </div>
+    </van-popup>
+
+    <van-popup
+      v-model:show="showStyleFilter"
+      position="top"
+      round
+      :style="{ height: '60%' }"
+    >
+      <div class="filter-popup">
+        <div class="filter-popup-header">
+          <span class="filter-title">选择造型风格</span>
+          <van-button type="primary" size="small" plain @click="clearStyleFilter">重置</van-button>
+        </div>
+        <div class="filter-popup-content">
+          <div class="filter-option-group" v-for="group in styleGroups" :key="group.name">
+            <div class="group-title">{{ group.name }}</div>
+            <div class="group-options">
+              <van-tag
+                v-for="item in group.items"
+                :key="item.value"
+                :type="selectedStyle === item.value ? 'primary' : 'default'"
+                size="medium"
+                plain
+                :class="{ 'tag-selected': selectedStyle === item.value }"
+                @click="selectStyle(item.value)"
+              >
+                {{ item.text }}
+              </van-tag>
+            </div>
+          </div>
+        </div>
+      </div>
+    </van-popup>
+
+    <van-overlay
+      :show="showSpeciesFilter || showStyleFilter"
+      @click="closeAllFilters"
+    ></van-overlay>
 
     <div class="content">
       <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
@@ -37,7 +120,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getPosts, getHotPosts } from '@/api/post'
 import { getCategoriesByType } from '@/api/category'
@@ -53,8 +136,53 @@ const page = ref(0)
 const hasMore = ref(true)
 const selectedSpecies = ref(0)
 const selectedStyle = ref(0)
-const speciesOptions = ref([{ text: '全部树种', value: 0 }])
-const styleOptions = ref([{ text: '全部风格', value: 0 }])
+const speciesList = ref([])
+const styleList = ref([])
+const showSpeciesFilter = ref(false)
+const showStyleFilter = ref(false)
+
+const speciesGroups = computed(() => {
+  const groups = new Map()
+  speciesList.value.forEach(s => {
+    const groupName = s.groupName || '其他'
+    if (!groups.has(groupName)) {
+      groups.set(groupName, [])
+    }
+    groups.get(groupName).push({
+      text: s.name,
+      value: s.id,
+      icon: s.icon
+    })
+  })
+  return Array.from(groups.entries()).map(([name, items]) => ({ name, items }))
+})
+
+const styleGroups = computed(() => {
+  const groups = new Map()
+  styleList.value.forEach(s => {
+    const groupName = s.groupName || '其他'
+    if (!groups.has(groupName)) {
+      groups.set(groupName, [])
+    }
+    groups.get(groupName).push({
+      text: s.name,
+      value: s.id
+    })
+  })
+  return Array.from(groups.entries()).map(([name, items]) => ({ name, items }))
+})
+
+const selectedSpeciesText = computed(() => {
+  if (selectedSpecies.value === 0) return '全部树种'
+  const species = speciesList.value.find(s => s.id === selectedSpecies.value)
+  return species ? species.name : '全部树种'
+})
+
+const selectedStyleText = computed(() => {
+  if (selectedStyle.value === 0) return '全部风格'
+  const style = styleList.value.find(s => s.id === selectedStyle.value)
+  return style ? style.name : '全部风格'
+})
 
 const loadCategories = async () => {
   try {
@@ -62,11 +190,50 @@ const loadCategories = async () => {
       getCategoriesByType('species'),
       getCategoriesByType('style')
     ])
-    speciesOptions.value.push(...species.map(s => ({ text: s.name, value: s.id })))
-    styleOptions.value.push(...styles.map(s => ({ text: s.name, value: s.id })))
+    speciesList.value = species
+    styleList.value = styles
   } catch (e) {
     console.error('加载分类失败', e)
   }
+}
+
+const toggleSpeciesFilter = () => {
+  showSpeciesFilter.value = !showSpeciesFilter.value
+  showStyleFilter.value = false
+}
+
+const toggleStyleFilter = () => {
+  showStyleFilter.value = !showStyleFilter.value
+  showSpeciesFilter.value = false
+}
+
+const closeAllFilters = () => {
+  showSpeciesFilter.value = false
+  showStyleFilter.value = false
+}
+
+const selectSpecies = (value) => {
+  selectedSpecies.value = value
+  showSpeciesFilter.value = false
+  filterPosts()
+}
+
+const selectStyle = (value) => {
+  selectedStyle.value = value
+  showStyleFilter.value = false
+  filterPosts()
+}
+
+const clearSpeciesFilter = () => {
+  selectedSpecies.value = 0
+  showSpeciesFilter.value = false
+  filterPosts()
+}
+
+const clearStyleFilter = () => {
+  selectedStyle.value = 0
+  showStyleFilter.value = false
+  filterPosts()
 }
 
 const filterPosts = () => {
@@ -155,8 +322,108 @@ onMounted(() => {
   box-shadow: var(--shadow-sm);
 }
 
-.category-filter {
+.filter-buttons {
+  display: flex;
   border-top: 1px solid var(--color-border);
+}
+
+.filter-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 12px 16px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border-right: 1px solid var(--color-border);
+}
+
+.filter-btn:last-child {
+  border-right: none;
+}
+
+.filter-btn.active {
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.filter-popup {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-card);
+}
+
+.filter-popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.filter-title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.filter-popup-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.filter-option-group {
+  margin-bottom: 20px;
+}
+
+.filter-option-group:last-child {
+  margin-bottom: 0;
+}
+
+.group-title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  margin-bottom: 12px;
+  padding-left: 8px;
+  border-left: 3px solid var(--color-primary);
+}
+
+.group-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.group-options :deep(.van-tag) {
+  padding: 8px 16px;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border-width: 1px;
+}
+
+.group-options :deep(.van-tag--plain) {
+  background: var(--color-bg-secondary);
+  border-color: var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+.group-options :deep(.van-tag--primary.van-tag--plain) {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.tag-selected {
+  background: var(--color-primary-light) !important;
+  border-color: var(--color-primary) !important;
+  color: var(--color-primary) !important;
 }
 
 .content {
