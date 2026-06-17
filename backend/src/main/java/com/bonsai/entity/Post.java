@@ -57,6 +57,18 @@ public class Post {
     @Column(name = "shaping_ideas", columnDefinition = "TEXT")
     private String shapingIdeas;
 
+    @Column(name = "trunk_treatment", columnDefinition = "TEXT")
+    private String trunkTreatment;
+
+    @Column(name = "branch_selection", columnDefinition = "TEXT")
+    private String branchSelection;
+
+    @Column(name = "pot_layout", columnDefinition = "TEXT")
+    private String potLayout;
+
+    @Column(name = "future_direction", columnDefinition = "TEXT")
+    private String futureDirection;
+
     @Column(name = "view_count")
     private Integer viewCount = 0;
 

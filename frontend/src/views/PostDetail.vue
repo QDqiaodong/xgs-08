@@ -42,9 +42,45 @@
           <div class="section-content">{{ post.content }}</div>
         </div>
 
-        <div class="post-section" v-if="post.shapingIdeas">
+        <div class="post-section" v-if="hasShapingIdeas()">
           <h3 class="section-title">造型思路</h3>
-          <div class="section-content">{{ post.shapingIdeas }}</div>
+          <div class="shaping-ideas-grid">
+            <div class="shaping-item" v-if="post.trunkTreatment">
+              <div class="shaping-item-header">
+                <van-icon name="balance-o" size="16" color="#07c160" />
+                <span class="shaping-item-title">主干处理</span>
+              </div>
+              <div class="shaping-item-content">{{ post.trunkTreatment }}</div>
+            </div>
+            
+            <div class="shaping-item" v-if="post.branchSelection">
+              <div class="shaping-item-header">
+                <van-icon name="cluster-o" size="16" color="#1989fa" />
+                <span class="shaping-item-title">枝托取舍</span>
+              </div>
+              <div class="shaping-item-content">{{ post.branchSelection }}</div>
+            </div>
+            
+            <div class="shaping-item" v-if="post.potLayout">
+              <div class="shaping-item-header">
+                <van-icon name="wap-home-o" size="16" color="#ff976a" />
+                <span class="shaping-item-title">盆面布局</span>
+              </div>
+              <div class="shaping-item-content">{{ post.potLayout }}</div>
+            </div>
+            
+            <div class="shaping-item" v-if="post.futureDirection">
+              <div class="shaping-item-header">
+                <van-icon name="arrow-up" size="16" color="#7232dd" />
+                <span class="shaping-item-title">未来培养</span>
+              </div>
+              <div class="shaping-item-content">{{ post.futureDirection }}</div>
+            </div>
+
+            <div class="shaping-item legacy-shaping" v-if="post.shapingIdeas && !hasNewShapingFields()">
+              <div class="shaping-item-content">{{ post.shapingIdeas }}</div>
+            </div>
+          </div>
         </div>
 
         <div class="post-section" v-if="post.carePoints">
@@ -200,6 +236,18 @@ const getLogTypeTag = (type) => {
 
 const hasPostMeta = () => {
   return post.value && (post.value.species || post.value.style || post.value.treeAge || post.value.potType)
+}
+
+const hasShapingIdeas = () => {
+  if (!post.value) return false
+  return !!(post.value.trunkTreatment || post.value.branchSelection || 
+           post.value.potLayout || post.value.futureDirection || post.value.shapingIdeas)
+}
+
+const hasNewShapingFields = () => {
+  if (!post.value) return false
+  return !!(post.value.trunkTreatment || post.value.branchSelection || 
+           post.value.potLayout || post.value.futureDirection)
 }
 
 const getPostImages = () => {
@@ -617,5 +665,64 @@ onMounted(() => {
 
 .comment-input-wrapper .van-field {
   flex: 1;
+}
+
+.shaping-ideas-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.shaping-item {
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  border-left: 3px solid transparent;
+}
+
+.shaping-item:nth-child(1) {
+  border-left-color: #07c160;
+  background: rgba(7, 193, 96, 0.05);
+}
+
+.shaping-item:nth-child(2) {
+  border-left-color: #1989fa;
+  background: rgba(25, 137, 250, 0.05);
+}
+
+.shaping-item:nth-child(3) {
+  border-left-color: #ff976a;
+  background: rgba(255, 151, 106, 0.05);
+}
+
+.shaping-item:nth-child(4) {
+  border-left-color: #7232dd;
+  background: rgba(114, 50, 221, 0.05);
+}
+
+.shaping-item.legacy-shaping {
+  border-left-color: #969799;
+  background: var(--color-bg-tertiary);
+}
+
+.shaping-item-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-sm);
+}
+
+.shaping-item-title {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.shaping-item-content {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-xl);
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 </style>

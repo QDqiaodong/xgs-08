@@ -60,18 +60,57 @@
             label="盆器"
             placeholder="请输入盆器类型"
           />
+        </van-cell-group>
 
+        <div class="shaping-section">
+          <div class="shaping-section-title">造型思路</div>
+          
           <van-field
-            v-model="form.shapingIdeas"
-            name="shapingIdeas"
-            label="造型思路"
+            v-model="form.trunkTreatment"
+            name="trunkTreatment"
+            label="主干处理"
             type="textarea"
-            placeholder="分享你的造型设计思路..."
-            :autosize="{ minHeight: 80 }"
-            maxlength="500"
+            placeholder="描述主干的造型处理方式，如弯曲、截干、雕饰等..."
+            :autosize="{ minHeight: 60 }"
+            maxlength="300"
             show-word-limit
           />
+          
+          <van-field
+            v-model="form.branchSelection"
+            name="branchSelection"
+            label="枝托取舍"
+            type="textarea"
+            placeholder="描述枝片的选择和布局，如主枝、辅枝的安排..."
+            :autosize="{ minHeight: 60 }"
+            maxlength="300"
+            show-word-limit
+          />
+          
+          <van-field
+            v-model="form.potLayout"
+            name="potLayout"
+            label="盆面布局"
+            type="textarea"
+            placeholder="描述盆面设计，如配石、铺苔、摆件的布置..."
+            :autosize="{ minHeight: 60 }"
+            maxlength="300"
+            show-word-limit
+          />
+          
+          <van-field
+            v-model="form.futureDirection"
+            name="futureDirection"
+            label="未来培养"
+            type="textarea"
+            placeholder="描述未来的培养方向和预期效果..."
+            :autosize="{ minHeight: 60 }"
+            maxlength="300"
+            show-word-limit
+          />
+        </div>
 
+        <van-cell-group inset>
           <van-field
             v-model="form.carePoints"
             name="carePoints"
@@ -182,6 +221,10 @@ const form = reactive({
   treeAge: null,
   potType: '',
   shapingIdeas: '',
+  trunkTreatment: '',
+  branchSelection: '',
+  potLayout: '',
+  futureDirection: '',
   carePoints: ''
 })
 
@@ -411,5 +454,41 @@ onMounted(() => {
   background: #e8f3ea !important;
   border-color: #07c160 !important;
   color: #07c160 !important;
+}
+
+.shaping-section {
+  margin: 12px 16px;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.shaping-section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #323233;
+  padding: 16px 16px 12px;
+  border-left: 3px solid #07c160;
+  margin: 0;
+}
+
+.shaping-section :deep(.van-cell) {
+  padding: 12px 16px;
+}
+
+.shaping-section :deep(.van-field--textarea) {
+  padding: 0;
+}
+
+.shaping-section :deep(.van-field--textarea .van-field__control) {
+  padding: 12px 16px;
+}
+
+.shaping-section :deep(.van-cell::after) {
+  left: 16px;
+}
+
+.shaping-section :deep(.van-cell:last-child::after) {
+  display: none;
 }
 </style>
