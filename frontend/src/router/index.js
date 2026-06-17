@@ -32,19 +32,24 @@ const routes = [
     component: () => import('@/views/BonsaiList.vue'),
   },
   {
-    path: '/bonsais/:id',
-    name: 'BonsaiDetail',
-    component: () => import('@/views/BonsaiDetail.vue'),
-  },
-  {
     path: '/bonsais/create',
     name: 'BonsaiCreate',
+    component: () => import('@/views/BonsaiCreate.vue'),
+  },
+  {
+    path: '/bonsais/:id/edit',
+    name: 'BonsaiEdit',
     component: () => import('@/views/BonsaiCreate.vue'),
   },
   {
     path: '/bonsais/:id/events/create',
     name: 'EventCreate',
     component: () => import('@/views/EventCreate.vue'),
+  },
+  {
+    path: '/bonsais/:id',
+    name: 'BonsaiDetail',
+    component: () => import('@/views/BonsaiDetail.vue'),
   },
 ]
 

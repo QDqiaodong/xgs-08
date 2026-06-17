@@ -96,7 +96,7 @@ import { getUserBonsaiList } from '@/api/bonsai'
 import { useUserStore } from '@/stores/user'
 import { getCoverImage, BONSAI_PLACEHOLDER_SVG } from '@/utils/image'
 import SpeciesCareTip from '@/components/SpeciesCareTip.vue'
-import { getSpeciesCare } from '@/utils/speciesCare'
+import { getSpeciesCare, getAllSpeciesNames } from '@/utils/speciesCare'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -106,22 +106,36 @@ const loading = ref(false)
 const bonsais = ref([])
 const coverErrors = ref({})
 const selectedSpeciesIndex = ref(0)
-const coreCareSpecies = ['榕树', '真柏', '黑松']
+const allSpeciesWithCareData = getAllSpeciesNames()
+const recommendedSpecies = ['榕树', '真柏', '黑松']
 
 const speciesWithCareData = computed(() => {
   const speciesCounts = new Map()
   bonsais.value.forEach(bonsai => {
-    const speciesName = bonsai.species?.name || coreCareSpecies.find(name => bonsai.name?.includes(name))
+    const speciesName = bonsai.species?.name || allSpeciesWithCareData.find(name => bonsai.name?.includes(name))
     if (speciesName) {
       speciesCounts.set(speciesName, (speciesCounts.get(speciesName) || 0) + 1)
     }
   })
 
-  return coreCareSpecies
+  const userSpeciesWithCare = Array.from(speciesCounts.keys())
+    .filter(name => getSpeciesCare(name))
     .map(name => ({
       name,
       careData: getSpeciesCare(name),
       count: speciesCounts.get(name) || 0
+    }))
+    .sort((a, b) => b.count - a.count)
+
+  if (userSpeciesWithCare.length > 0) {
+    return userSpeciesWithCare
+  }
+
+  return recommendedSpecies
+    .map(name => ({
+      name,
+      careData: getSpeciesCare(name),
+      count: 0
     }))
     .filter(species => species.careData)
 })

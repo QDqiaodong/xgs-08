@@ -382,7 +382,7 @@ const goAddEvent = () => {
 
 const onActionChange = (value) => {
   if (value === 1) {
-    showToast('编辑功能开发中')
+    router.push(`/bonsais/${route.params.id}/edit`)
   } else if (value === 2) {
     confirmDeleteBonsai()
   }

@@ -1,8 +1,12 @@
 <template>
   <div class="bonsai-create-page">
-    <van-nav-bar title="新增盆景" left-arrow @click-left="goBack" fixed placeholder />
+    <van-nav-bar :title="isEdit ? '编辑盆景' : '新增盆景'" left-arrow @click-left="goBack" fixed placeholder />
 
-    <div class="content">
+    <div v-if="loading" class="loading-wrapper">
+      <van-loading size="24px">加载中...</van-loading>
+    </div>
+
+    <div v-else class="content">
       <van-form @submit="onSubmit">
         <van-cell-group inset>
           <van-field
@@ -148,17 +152,23 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { showToast } from 'vant'
-import { createBonsai } from '@/api/bonsai'
+import { createBonsai, updateBonsai, getBonsaiById } from '@/api/bonsai'
 import { getCategoriesByType } from '@/api/category'
 import { useUserStore } from '@/stores/user'
 import { validateImageFile, uploadSingleImage } from '@/api/upload'
+import { getImageWithFallback } from '@/utils/image'
 
 const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
 
+const isEdit = computed(() => !!route.params.id)
+const loading = ref(false)
+
 const form = reactive({
+  id: null,
   name: '',
   speciesId: null,
   treeAge: null,
@@ -230,6 +240,46 @@ const afterRead = async (file) => {
   }
 }
 
+const loadBonsai = async () => {
+  if (!isEdit.value) return
+  loading.value = true
+  try {
+    const bonsai = await getBonsaiById(route.params.id)
+    if (bonsai) {
+      form.id = bonsai.id
+      form.name = bonsai.name || ''
+      form.speciesId = bonsai.speciesId || null
+      form.treeAge = bonsai.treeAge || null
+      form.potType = bonsai.potType || ''
+      form.acquireDate = bonsai.acquireDate || ''
+      form.description = bonsai.description || ''
+      form.coverImage = bonsai.coverImage || ''
+      form.trunkShape = bonsai.trunkShape || ''
+      form.branchSupport = bonsai.branchSupport || ''
+      form.crownWidth = bonsai.crownWidth || ''
+      form.potSurface = bonsai.potSurface || ''
+
+      if (bonsai.species) {
+        selectedSpeciesName.value = bonsai.species.name
+        tempSpeciesId.value = bonsai.speciesId
+        tempSpeciesName.value = bonsai.species.name
+      }
+
+      if (bonsai.coverImage) {
+        fileList.value = [{
+          url: getImageWithFallback(bonsai.coverImage),
+          status: 'done',
+          uploadedUrl: bonsai.coverImage
+        }]
+      }
+    }
+  } catch (e) {
+    showToast('加载失败')
+  } finally {
+    loading.value = false
+  }
+}
+
 const onSubmit = async () => {
   const uploadingFile = fileList.value.find(f => f.status === 'uploading')
   if (uploadingFile) {
@@ -253,13 +303,19 @@ const onSubmit = async () => {
       ...form
     }
 
-    const result = await createBonsai(data)
-    showToast('添加成功')
+    let result
+    if (isEdit.value) {
+      result = await updateBonsai(data)
+      showToast('保存成功')
+    } else {
+      result = await createBonsai(data)
+      showToast('添加成功')
+    }
     setTimeout(() => {
       router.replace(`/bonsais/${result.id}`)
     }, 1000)
   } catch (e) {
-    showToast(e?.response?.data?.message || e?.message || '添加失败')
+    showToast(e?.response?.data?.message || e?.message || (isEdit.value ? '保存失败' : '添加失败'))
   } finally {
     submitting.value = false
   }
@@ -269,8 +325,9 @@ const goBack = () => {
   router.back()
 }
 
-onMounted(() => {
-  loadCategories()
+onMounted(async () => {
+  await loadCategories()
+  loadBonsai()
 })
 </script>
 
