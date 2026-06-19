@@ -206,7 +206,7 @@
       <van-tabbar-item to="/profile" icon="user-o">我的</van-tabbar-item>
     </van-tabbar>
 
-    <van-dialog v-model:show="showAddDialog" title="添加养护记录" show-cancel-button @confirm="submitLog">
+    <van-dialog v-model:show="showAddDialog" title="添加养护记录" show-cancel-button @confirm="submitLog" @open="resetLogForm">
       <van-form>
         <van-field
           v-model="logForm.logType"
@@ -215,6 +215,14 @@
           is-link
           readonly
           @click="showTypePicker = true"
+        />
+        <van-field
+          v-model="selectedBonsaiName"
+          label="关联盆景"
+          placeholder="请选择盆景（选填）"
+          is-link
+          readonly
+          @click="showBonsaiPicker = true"
         />
         <van-field
           v-if="logForm.logType === 'water'"
@@ -271,6 +279,15 @@
         @cancel="showTypePicker = false"
       />
     </van-popup>
+
+    <van-popup v-model:show="showBonsaiPicker" position="bottom">
+      <van-picker
+        :columns="[{ text: '不关联', value: null }, ...bonsaiList.map(b => ({ text: b.name, value: b.id }))]"
+        title="选择关联盆景"
+        @confirm="onBonsaiConfirm"
+        @cancel="showBonsaiPicker = false"
+      />
+    </van-popup>
   </div>
 </template>
 
@@ -278,6 +295,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { showToast } from 'vant'
 import { getUserCareLogs, createCareLog } from '@/api/careLog'
+import { getUserBonsaiList } from '@/api/bonsai'
 import { useUserStore } from '@/stores/user'
 import { getCareTips, groupLogsBySolarTerm, SEASON_ORDER } from '@/utils/solarTerms'
 
@@ -289,7 +307,9 @@ const loading = ref(false)
 const careLogs = ref([])
 const showAddDialog = ref(false)
 const showTypePicker = ref(false)
+const showBonsaiPicker = ref(false)
 const selectedSeason = ref('all')
+const bonsaiList = ref([])
 
 const logForm = reactive({
   logType: 'water',
@@ -298,8 +318,11 @@ const logForm = reactive({
   logDate: new Date().toISOString().split('T')[0],
   fertilizer: '',
   position: '',
-  soilType: ''
+  soilType: '',
+  bonsaiId: null
 })
+
+const selectedBonsaiName = ref('')
 
 const logTypes = [
   { text: '浇水', value: 'water' },
@@ -405,9 +428,54 @@ const loadLogs = async () => {
   }
 }
 
+const loadBonsaiList = async () => {
+  try {
+    bonsaiList.value = await getUserBonsaiList(userStore.currentUser.id)
+  } catch (e) {
+    console.warn('加载盆景列表失败', e)
+  }
+}
+
+const getSelectedBonsai = () => {
+  if (!logForm.bonsaiId) return null
+  return bonsaiList.value.find(b => b.id === logForm.bonsaiId)
+}
+
+const validateLogDate = () => {
+  if (!logForm.logDate) {
+    showToast('养护日期不能为空')
+    return false
+  }
+
+  const logDate = new Date(logForm.logDate)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const maxFutureDate = new Date(today)
+  maxFutureDate.setDate(maxFutureDate.getDate() + 30)
+
+  if (logDate > maxFutureDate) {
+    showToast('养护日期不能超过未来30天')
+    return false
+  }
+
+  const selectedBonsai = getSelectedBonsai()
+  if (selectedBonsai && selectedBonsai.acquireDate) {
+    const acquireDate = new Date(selectedBonsai.acquireDate)
+    if (logDate < acquireDate) {
+      showToast(`养护日期不能早于盆景入手日期（${selectedBonsai.acquireDate}）`)
+      return false
+    }
+  }
+
+  return true
+}
+
 const submitLog = async () => {
   if (!logForm.content.trim()) {
     showToast('请输入养护内容')
+    return
+  }
+  if (!validateLogDate()) {
     return
   }
   try {
@@ -421,15 +489,39 @@ const submitLog = async () => {
     logForm.fertilizer = ''
     logForm.position = ''
     logForm.soilType = ''
+    logForm.bonsaiId = null
+    selectedBonsaiName.value = ''
     await loadLogs()
     showToast('记录成功')
   } catch (e) {
-    showToast('记录失败')
+    showToast(e?.message || '记录失败')
   }
+}
+
+const onBonsaiConfirm = ({ selectedOptions }) => {
+  if (selectedOptions && selectedOptions.length > 0) {
+    logForm.bonsaiId = selectedOptions[0].value
+    selectedBonsaiName.value = selectedOptions[0].text
+  }
+  showBonsaiPicker.value = false
+}
+
+const resetLogForm = () => {
+  logForm.logType = 'water'
+  logForm.title = ''
+  logForm.content = ''
+  logForm.logDate = new Date().toISOString().split('T')[0]
+  logForm.fertilizer = ''
+  logForm.position = ''
+  logForm.soilType = ''
+  logForm.bonsaiId = null
+  selectedBonsaiName.value = ''
+  selectedTypeName.value = '浇水'
 }
 
 onMounted(() => {
   loadLogs()
+  loadBonsaiList()
 })
 </script>
 

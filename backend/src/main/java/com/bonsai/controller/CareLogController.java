@@ -30,6 +30,11 @@ public class CareLogController {
         return Result.success(careLogService.getPostCareLogs(postId));
     }
 
+    @GetMapping("/bonsai/{bonsaiId}")
+    public Result<List<CareLog>> getBonsaiCareLogs(@PathVariable Long bonsaiId) {
+        return Result.success(careLogService.getBonsaiCareLogs(bonsaiId));
+    }
+
     @PostMapping
     public Result<CareLog> createCareLog(@Valid @RequestBody CareLog careLog) {
         return Result.success(careLogService.createCareLog(careLog));

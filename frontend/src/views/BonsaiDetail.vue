@@ -84,6 +84,63 @@
         </div>
       </div>
 
+      <div class="care-summary-section card">
+        <div class="section-title">
+          <van-icon name="notes-o" />
+          <span>养护摘要</span>
+        </div>
+        <div class="care-summary-grid">
+          <div class="care-summary-item water">
+            <div class="care-icon-wrapper">
+              <van-icon name="down" size="20" />
+            </div>
+            <div class="care-label">浇水</div>
+            <div class="care-date">
+              {{ careSummary?.lastWaterDate || '暂无记录' }}
+            </div>
+            <div v-if="careSummary?.lastWaterDate" class="care-days">
+              {{ getDaysAgo(careSummary.lastWaterDate) }}
+            </div>
+          </div>
+          <div class="care-summary-item prune">
+            <div class="care-icon-wrapper">
+              <van-icon name="scissors-o" size="20" />
+            </div>
+            <div class="care-label">修剪</div>
+            <div class="care-date">
+              {{ careSummary?.lastPruneDate || '暂无记录' }}
+            </div>
+            <div v-if="careSummary?.lastPruneDate" class="care-days">
+              {{ getDaysAgo(careSummary.lastPruneDate) }}
+            </div>
+          </div>
+          <div class="care-summary-item fertilize">
+            <div class="care-icon-wrapper">
+              <van-icon name="balance-o" size="20" />
+            </div>
+            <div class="care-label">施肥</div>
+            <div class="care-date">
+              {{ careSummary?.lastFertilizeDate || '暂无记录' }}
+            </div>
+            <div v-if="careSummary?.lastFertilizeDate" class="care-days">
+              {{ getDaysAgo(careSummary.lastFertilizeDate) }}
+            </div>
+          </div>
+          <div class="care-summary-item repot">
+            <div class="care-icon-wrapper">
+              <van-icon name="exchange" size="20" />
+            </div>
+            <div class="care-label">换盆</div>
+            <div class="care-date">
+              {{ careSummary?.lastRepotDate || '暂无记录' }}
+            </div>
+            <div v-if="careSummary?.lastRepotDate" class="care-days">
+              {{ getDaysAgo(careSummary.lastRepotDate) }}
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="timeline-section card">
         <div class="timeline-header">
           <div class="section-title">生命周期时间线</div>
@@ -175,7 +232,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { showToast, showConfirmDialog, showImagePreview } from 'vant'
-import { getBonsaiById, deleteBonsai } from '@/api/bonsai'
+import { getBonsaiById, deleteBonsai, getCareSummary } from '@/api/bonsai'
 import { getEventsByBonsaiId, deleteEvent as deleteEventApi } from '@/api/lifecycleEvent'
 import { getCoverImage, parseImages, getImageWithFallback, BONSAI_PLACEHOLDER_SVG, PLACEHOLDER_SVG } from '@/utils/image'
 import BeforeAfterCompare from '@/components/BeforeAfterCompare.vue'
@@ -188,6 +245,7 @@ const activeFooter = ref(1)
 const loading = ref(false)
 const bonsai = ref(null)
 const events = ref([])
+const careSummary = ref(null)
 const actionValue = ref(0)
 const coverError = ref(false)
 const eventImageErrors = ref({})
@@ -215,6 +273,25 @@ const hasOutlineData = computed(() => {
 const formatDate = (date) => {
   if (!date) return ''
   return date
+}
+
+const getDaysAgo = (dateStr) => {
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  date.setHours(0, 0, 0, 0)
+  const diffTime = today.getTime() - date.getTime()
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+  if (diffDays === 0) return '今天'
+  if (diffDays === 1) return '昨天'
+  if (diffDays < 30) return `${diffDays}天前`
+  if (diffDays < 365) {
+    const months = Math.floor(diffDays / 30)
+    return `${months}个月前`
+  }
+  const years = Math.floor(diffDays / 365)
+  return `${years}年前`
 }
 
 const getBonsaiCover = () => {
@@ -372,6 +449,15 @@ const loadEvents = async () => {
   }
 }
 
+const loadCareSummary = async () => {
+  try {
+    const id = route.params.id
+    careSummary.value = await getCareSummary(id)
+  } catch (e) {
+    console.warn('加载养护摘要失败', e)
+  }
+}
+
 const goBack = () => {
   router.back()
 }
@@ -426,6 +512,7 @@ const deleteEvent = async (event, index) => {
 onMounted(() => {
   loadBonsai()
   loadEvents()
+  loadCareSummary()
 })
 </script>
 
@@ -744,6 +831,112 @@ onMounted(() => {
 @media (max-width: 360px) {
   .outline-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+.care-summary-section {
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
+}
+
+.care-summary-section .section-title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-lg);
+  padding-left: var(--spacing-sm);
+  border-left: 3px solid var(--color-primary);
+}
+
+.care-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--spacing-md);
+}
+
+.care-summary-item {
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  border: 1px solid transparent;
+  transition: all var(--transition-base);
+}
+
+.care-summary-item.water {
+  border-color: rgba(25, 137, 250, 0.2);
+}
+
+.care-summary-item.prune {
+  border-color: rgba(255, 151, 106, 0.2);
+}
+
+.care-summary-item.fertilize {
+  border-color: rgba(7, 193, 96, 0.2);
+}
+
+.care-summary-item.repot {
+  border-color: rgba(238, 10, 36, 0.2);
+}
+
+.care-icon-wrapper {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--spacing-sm);
+}
+
+.care-summary-item.water .care-icon-wrapper {
+  background: rgba(25, 137, 250, 0.1);
+  color: #1989fa;
+}
+
+.care-summary-item.prune .care-icon-wrapper {
+  background: rgba(255, 151, 106, 0.1);
+  color: #ff976a;
+}
+
+.care-summary-item.fertilize .care-icon-wrapper {
+  background: rgba(7, 193, 96, 0.1);
+  color: #07c160;
+}
+
+.care-summary-item.repot .care-icon-wrapper {
+  background: rgba(238, 10, 36, 0.1);
+  color: #ee0a24;
+}
+
+.care-label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-xs);
+}
+
+.care-date {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-base);
+  margin-bottom: 2px;
+}
+
+.care-days {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+@media (max-width: 360px) {
+  .care-summary-grid {
+    grid-template-columns: 1fr 1fr;
   }
 }
 </style>

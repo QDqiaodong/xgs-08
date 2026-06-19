@@ -24,6 +24,13 @@ public class CareLog {
     @Column(name = "post_id")
     private Long postId;
 
+    @Column(name = "bonsai_id")
+    private Long bonsaiId;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "bonsai_id", insertable = false, updatable = false)
+    private Bonsai bonsai;
+
     @NotBlank(message = "养护类型不能为空")
     @Size(max = 50, message = "养护类型长度不能超过50个字符")
     @Column(name = "log_type", nullable = false, length = 50)

@@ -1,5 +1,6 @@
 package com.bonsai.service;
 
+import com.bonsai.dto.CareSummary;
 import com.bonsai.dto.UserBonsaiProfile;
 import com.bonsai.entity.Bonsai;
 import com.bonsai.entity.CareLog;
@@ -164,5 +165,31 @@ public class BonsaiService {
         }
 
         return profile;
+    }
+
+    public CareSummary getCareSummary(Long bonsaiId) {
+        CareSummary summary = new CareSummary();
+
+        List<CareLog> lastWater = careLogRepository.findTop1ByBonsaiIdAndLogTypeOrderByLogDateDesc(bonsaiId, "water");
+        if (!lastWater.isEmpty()) {
+            summary.setLastWaterDate(lastWater.get(0).getLogDate());
+        }
+
+        List<CareLog> lastPrune = careLogRepository.findTop1ByBonsaiIdAndLogTypeOrderByLogDateDesc(bonsaiId, "prune");
+        if (!lastPrune.isEmpty()) {
+            summary.setLastPruneDate(lastPrune.get(0).getLogDate());
+        }
+
+        List<CareLog> lastFertilize = careLogRepository.findTop1ByBonsaiIdAndLogTypeOrderByLogDateDesc(bonsaiId, "fertilize");
+        if (!lastFertilize.isEmpty()) {
+            summary.setLastFertilizeDate(lastFertilize.get(0).getLogDate());
+        }
+
+        List<CareLog> lastRepot = careLogRepository.findTop1ByBonsaiIdAndLogTypeOrderByLogDateDesc(bonsaiId, "repot");
+        if (!lastRepot.isEmpty()) {
+            summary.setLastRepotDate(lastRepot.get(0).getLogDate());
+        }
+
+        return summary;
     }
 }

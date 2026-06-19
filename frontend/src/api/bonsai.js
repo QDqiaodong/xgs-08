@@ -27,3 +27,7 @@ export function updateBonsai(data) {
 export function deleteBonsai(id) {
   return request.delete(`/bonsais/${id}`)
 }
+
+export function getCareSummary(bonsaiId) {
+  return request.get(`/bonsais/${bonsaiId}/care-summary`)
+}

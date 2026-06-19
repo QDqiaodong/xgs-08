@@ -1,5 +1,6 @@
 package com.bonsai.controller;
 
+import com.bonsai.dto.CareSummary;
 import com.bonsai.dto.Result;
 import com.bonsai.dto.UserBonsaiProfile;
 import com.bonsai.entity.Bonsai;
@@ -56,5 +57,10 @@ public class BonsaiController {
     public Result<Void> deleteBonsai(@PathVariable Long id) {
         bonsaiService.deleteBonsai(id);
         return Result.success();
+    }
+
+    @GetMapping("/{id}/care-summary")
+    public Result<CareSummary> getCareSummary(@PathVariable Long id) {
+        return Result.success(bonsaiService.getCareSummary(id));
     }
 }
