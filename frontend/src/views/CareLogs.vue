@@ -206,78 +206,167 @@
       <van-tabbar-item to="/profile" icon="user-o">我的</van-tabbar-item>
     </van-tabbar>
 
-    <van-dialog v-model:show="showAddDialog" title="添加养护记录" show-cancel-button @confirm="submitLog" @open="resetLogForm">
-      <van-form>
-        <van-field
-          v-model="logForm.logType"
-          label="类型"
-          placeholder="请选择养护类型"
-          is-link
-          readonly
-          @click="showTypePicker = true"
-        />
-        <van-field
-          v-model="selectedBonsaiName"
-          label="关联盆景"
-          placeholder="请选择盆景（选填）"
-          is-link
-          readonly
-          @click="showBonsaiPicker = true"
-        />
-        <van-field
-          v-if="logForm.logType === 'water'"
-          v-model="logForm.logDate"
-          label="浇水日期"
-          type="date"
-          placeholder="选择日期"
-        />
-        <van-field
-          v-else
-          v-model="logForm.logDate"
-          label="日期"
-          type="date"
-          placeholder="选择日期"
-        />
-        <van-field
-          v-if="logForm.logType === 'fertilize'"
-          v-model="logForm.fertilizer"
-          label="肥料"
-          placeholder="请输入肥料名称"
-        />
-        <van-field
-          v-if="logForm.logType === 'prune'"
-          v-model="logForm.position"
-          label="修剪部位"
-          placeholder="请输入修剪部位"
-        />
-        <van-field
-          v-if="logForm.logType === 'repot'"
-          v-model="logForm.soilType"
-          label="盆土"
-          placeholder="请输入盆土类型"
-        />
-        <van-field
-          v-model="logForm.title"
-          label="标题"
-          placeholder="请输入标题（选填）"
-        />
-        <van-field
-          v-model="logForm.content"
-          label="内容"
-          type="textarea"
-          placeholder="记录养护详情..."
-          :autosize="{ minHeight: 80 }"
-        />
-      </van-form>
-    </van-dialog>
+    <van-popup v-model:show="showAddDialog" position="bottom" round :style="{ height: '90%' }" @open="resetLogForm">
+      <div class="quick-log-panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <van-icon name="edit" size="18" color="#07c160" />
+            <span>记录养护</span>
+          </div>
+          <van-icon name="cross" size="22" @click="showAddDialog = false" />
+        </div>
 
-    <van-popup v-model:show="showTypePicker" position="bottom">
-      <van-picker
-        :columns="logTypes"
-        title="选择养护类型"
-        @confirm="onTypeConfirm"
-        @cancel="showTypePicker = false"
-      />
+        <div class="panel-content">
+          <div class="type-quick-select">
+            <div class="section-label">养护类型</div>
+            <div class="type-grid">
+              <div
+                v-for="type in logTypes"
+                :key="type.value"
+                class="type-item"
+                :class="{ active: logForm.logType === type.value }"
+                @click="selectLogType(type.value)"
+              >
+                <div class="type-icon" :class="'icon-' + type.value">
+                  <van-icon :name="type.icon" size="22" />
+                </div>
+                <span class="type-name">{{ type.text }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="date-row">
+            <div class="section-label">养护日期</div>
+            <van-cell-group inset class="date-cell-group">
+              <van-field
+                v-model="logForm.logDate"
+                type="date"
+                placeholder="选择日期"
+                :border="false"
+              >
+                <template #left-icon>
+                  <van-icon name="calendar-o" size="18" color="#969799" />
+                </template>
+              </van-field>
+            </van-cell-group>
+          </div>
+
+          <div class="bonsai-row">
+            <div class="section-label">
+              <span>关联盆景</span>
+              <span class="optional-tip">（选填）</span>
+            </div>
+            <van-cell-group inset class="bonsai-cell-group">
+              <van-field
+                :value="selectedBonsaiName || '不关联'"
+                is-link
+                readonly
+                :border="false"
+                @click="showBonsaiPicker = true"
+              >
+                <template #left-icon>
+                  <van-icon name="flower-o" size="18" color="#969799" />
+                </template>
+              </van-field>
+            </van-cell-group>
+          </div>
+
+          <div v-if="logForm.logType === 'fertilize'" class="extra-field">
+            <div class="section-label">肥料</div>
+            <van-field
+              v-model="logForm.fertilizer"
+              placeholder="如：复合肥、有机肥..."
+              :border="false"
+            >
+              <template #left-icon>
+                <van-icon name="balance-o" size="18" color="#969799" />
+              </template>
+            </van-field>
+          </div>
+          <div v-else-if="logForm.logType === 'prune'" class="extra-field">
+            <div class="section-label">修剪部位</div>
+            <van-field
+              v-model="logForm.position"
+              placeholder="如：顶枝、侧枝..."
+              :border="false"
+            >
+              <template #left-icon>
+                <van-icon name="scissors-o" size="18" color="#969799" />
+              </template>
+            </van-field>
+          </div>
+          <div v-else-if="logForm.logType === 'repot'" class="extra-field">
+            <div class="section-label">盆土</div>
+            <van-field
+              v-model="logForm.soilType"
+              placeholder="如：腐殖土、赤玉土..."
+              :border="false"
+            >
+              <template #left-icon>
+                <van-icon name="exchange" size="18" color="#969799" />
+              </template>
+            </van-field>
+          </div>
+
+          <div class="photo-section">
+            <div class="section-label">
+              <span>现场照片</span>
+              <span class="optional-tip">（选填）</span>
+            </div>
+            <van-uploader
+              v-model="photoFileList"
+              :max-count="3"
+              :before-read="beforePhotoRead"
+              :after-read="afterPhotoRead"
+              upload-text="拍照"
+              :preview-size="70"
+            />
+          </div>
+
+          <div class="content-section">
+            <div class="section-label">
+              <span>护理要点</span>
+              <span class="char-count">{{ logForm.content.length }}/200</span>
+            </div>
+            <van-field
+              v-model="logForm.content"
+              type="textarea"
+              placeholder="记录本次养护的关键要点..."
+              :autosize="{ minHeight: 80, maxHeight: 120 }"
+              maxlength="200"
+              show-word-limit
+              :border="false"
+              class="content-textarea"
+            />
+          </div>
+
+          <div class="quick-tips">
+            <div class="tips-title">
+              <van-icon name="bulb-o" size="12" color="#ff976a" />
+              <span>快捷标签</span>
+            </div>
+            <div class="tips-tags">
+              <van-tag
+                v-for="tip in quickTips"
+                :key="tip"
+                size="medium"
+                plain
+                type="primary"
+                @click="appendTip(tip)"
+              >
+                {{ tip }}
+              </van-tag>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-footer">
+          <van-button round block type="primary" size="large" @click="submitLog" :loading="submitting">
+            <van-icon name="checked" />
+            完成记录
+          </van-button>
+        </div>
+      </div>
     </van-popup>
 
     <van-popup v-model:show="showBonsaiPicker" position="bottom">
@@ -298,6 +387,7 @@ import { getUserCareLogs, createCareLog } from '@/api/careLog'
 import { getUserBonsaiList } from '@/api/bonsai'
 import { useUserStore } from '@/stores/user'
 import { getCareTips, groupLogsBySolarTerm, SEASON_ORDER } from '@/utils/solarTerms'
+import { validateImageFile, uploadSingleImage } from '@/api/upload'
 
 const userStore = useUserStore()
 
@@ -310,6 +400,8 @@ const showTypePicker = ref(false)
 const showBonsaiPicker = ref(false)
 const selectedSeason = ref('all')
 const bonsaiList = ref([])
+const submitting = ref(false)
+const photoFileList = ref([])
 
 const logForm = reactive({
   logType: 'water',
@@ -319,20 +411,30 @@ const logForm = reactive({
   fertilizer: '',
   position: '',
   soilType: '',
-  bonsaiId: null
+  bonsaiId: null,
+  images: ''
 })
 
 const selectedBonsaiName = ref('')
 
 const logTypes = [
-  { text: '浇水', value: 'water' },
-  { text: '施肥', value: 'fertilize' },
-  { text: '修剪', value: 'prune' },
-  { text: '换盆', value: 'repot' },
-  { text: '其他', value: 'other' }
+  { text: '浇水', value: 'water', icon: 'down' },
+  { text: '施肥', value: 'fertilize', icon: 'balance-o' },
+  { text: '修剪', value: 'prune', icon: 'scissors-o' },
+  { text: '换盆', value: 'repot', icon: 'exchange' },
+  { text: '其他', value: 'other', icon: 'more-o' }
 ]
 
-const selectedTypeName = ref('浇水')
+const quickTips = computed(() => {
+  const tipsMap = {
+    water: ['浇透', '叶面喷水', '见干见湿', '避正午'],
+    fertilize: ['薄肥勤施', '复合肥', '有机肥', '叶面肥'],
+    prune: ['摘心', '疏枝', '造型修剪', '剪病枝'],
+    repot: ['修根', '换土', '消毒', '缓苗'],
+    other: ['观察记录', '病虫害防治', '清理盆面', '转盆']
+  }
+  return tipsMap[logForm.logType] || tipsMap.other
+})
 
 const stats = computed(() => {
   const result = { total: careLogs.value.length, water: 0, fertilize: 0, prune: 0, repot: 0, other: 0 }
@@ -407,13 +509,40 @@ const getSeasonLogCount = (seasonData) => {
   return count
 }
 
-const onTypeConfirm = ({ selectedOptions }) => {
-  logForm.logType = selectedOptions[0].value
-  selectedTypeName.value = selectedOptions[0].text
+const selectLogType = (type) => {
+  logForm.logType = type
   logForm.fertilizer = ''
   logForm.position = ''
   logForm.soilType = ''
-  showTypePicker.value = false
+}
+
+const appendTip = (tip) => {
+  if (logForm.content.length + tip.length + 1 > 200) {
+    showToast('内容已达上限')
+    return
+  }
+  if (logForm.content && !logForm.content.endsWith('，') && !logForm.content.endsWith('、')) {
+    logForm.content += '、'
+  }
+  logForm.content += tip
+}
+
+const beforePhotoRead = (file) => {
+  return validateImageFile(file)
+}
+
+const afterPhotoRead = async (file) => {
+  file.status = 'uploading'
+  file.message = '上传中...'
+  try {
+    await uploadSingleImage(file)
+    file.status = 'done'
+    file.message = ''
+  } catch (e) {
+    file.status = 'failed'
+    file.message = '上传失败'
+    showToast(e?.response?.data?.message || e?.message || '图片上传失败')
+  }
 }
 
 const loadLogs = async () => {
@@ -472,29 +601,43 @@ const validateLogDate = () => {
 
 const submitLog = async () => {
   if (!logForm.content.trim()) {
-    showToast('请输入养护内容')
+    showToast('请输入护理要点')
     return
   }
   if (!validateLogDate()) {
     return
   }
+
+  const uploadingFile = photoFileList.value.find(f => f.status === 'uploading')
+  if (uploadingFile) {
+    showToast('图片正在上传中，请稍候')
+    return
+  }
+  const failedFile = photoFileList.value.find(f => f.status === 'failed')
+  if (failedFile) {
+    showToast('存在上传失败的图片，请重新上传')
+    return
+  }
+
+  submitting.value = true
   try {
+    const images = photoFileList.value
+      .filter(f => f.status === 'done' && f.uploadedUrl)
+      .map(f => f.uploadedUrl)
+      .join(',')
+
     await createCareLog({
       userId: userStore.currentUser.id,
-      ...logForm
+      ...logForm,
+      images
     })
     showAddDialog.value = false
-    logForm.title = ''
-    logForm.content = ''
-    logForm.fertilizer = ''
-    logForm.position = ''
-    logForm.soilType = ''
-    logForm.bonsaiId = null
-    selectedBonsaiName.value = ''
-    await loadLogs()
     showToast('记录成功')
+    await loadLogs()
   } catch (e) {
     showToast(e?.message || '记录失败')
+  } finally {
+    submitting.value = false
   }
 }
 
@@ -515,8 +658,9 @@ const resetLogForm = () => {
   logForm.position = ''
   logForm.soilType = ''
   logForm.bonsaiId = null
+  logForm.images = ''
   selectedBonsaiName.value = ''
-  selectedTypeName.value = '浇水'
+  photoFileList.value = []
 }
 
 onMounted(() => {
@@ -969,5 +1113,248 @@ onMounted(() => {
   .terms-container {
     grid-template-columns: repeat(2, 1fr);
   }
+}
+
+.quick-log-panel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-page);
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: var(--color-bg-card);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.panel-title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.panel-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.section-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-xs);
+  padding-left: var(--spacing-xs);
+}
+
+.optional-tip {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  font-weight: var(--font-weight-normal);
+}
+
+.char-count {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  font-weight: var(--font-weight-normal);
+}
+
+.type-quick-select {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-md);
+}
+
+.type-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--spacing-xs);
+}
+
+.type-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm) var(--spacing-xs);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  background: var(--color-bg-secondary);
+}
+
+.type-item:active {
+  transform: scale(0.95);
+}
+
+.type-item.active {
+  background: var(--color-primary-light);
+}
+
+.type-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-secondary);
+}
+
+.type-item.active .type-icon {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.type-icon.icon-water {
+  background: rgba(25, 137, 250, 0.1);
+  color: #1989fa;
+}
+
+.type-item.active .type-icon.icon-water {
+  background: #1989fa;
+  color: #fff;
+}
+
+.type-icon.icon-fertilize {
+  background: rgba(7, 193, 96, 0.1);
+  color: #07c160;
+}
+
+.type-item.active .type-icon.icon-fertilize {
+  background: #07c160;
+  color: #fff;
+}
+
+.type-icon.icon-prune {
+  background: rgba(255, 151, 106, 0.1);
+  color: #ff976a;
+}
+
+.type-item.active .type-icon.icon-prune {
+  background: #ff976a;
+  color: #fff;
+}
+
+.type-icon.icon-repot {
+  background: rgba(238, 10, 36, 0.1);
+  color: #ee0a24;
+}
+
+.type-item.active .type-icon.icon-repot {
+  background: #ee0a24;
+  color: #fff;
+}
+
+.type-icon.icon-other {
+  background: rgba(150, 151, 153, 0.1);
+  color: #969799;
+}
+
+.type-item.active .type-icon.icon-other {
+  background: #969799;
+  color: #fff;
+}
+
+.type-name {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.type-item.active .type-name {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+.date-row,
+.bonsai-row {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-sm) 0;
+}
+
+.date-cell-group,
+.bonsai-cell-group {
+  background: transparent !important;
+}
+
+.extra-field {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-sm) var(--spacing-md);
+}
+
+.photo-section {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-md);
+}
+
+.content-section {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-md);
+}
+
+.content-textarea {
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-sm);
+}
+
+.quick-tips {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-md);
+}
+
+.tips-title {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-sm);
+}
+
+.tips-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+}
+
+.tips-tags :deep(.van-tag) {
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.tips-tags :deep(.van-tag:active) {
+  transform: scale(0.95);
+}
+
+.panel-footer {
+  padding: var(--spacing-md);
+  background: var(--color-bg-card);
+  border-top: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.panel-footer :deep(.van-button) {
+  box-shadow: 0 4px 12px rgba(7, 193, 96, 0.3);
 }
 </style>

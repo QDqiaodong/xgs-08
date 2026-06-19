@@ -97,6 +97,7 @@ import { useUserStore } from '@/stores/user'
 import { getCoverImage, BONSAI_PLACEHOLDER_SVG } from '@/utils/image'
 import SpeciesCareTip from '@/components/SpeciesCareTip.vue'
 import { getSpeciesCare, getAllSpeciesNames } from '@/utils/speciesCare'
+import { normalizeSpecies, isUnknownSpecies } from '@/utils/speciesNormalizer'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -112,9 +113,18 @@ const recommendedSpecies = ['榕树', '真柏', '黑松']
 const speciesWithCareData = computed(() => {
   const speciesCounts = new Map()
   bonsais.value.forEach(bonsai => {
-    const speciesName = bonsai.species?.name || allSpeciesWithCareData.find(name => bonsai.name?.includes(name))
-    if (speciesName) {
-      speciesCounts.set(speciesName, (speciesCounts.get(speciesName) || 0) + 1)
+    let speciesName = bonsai.species?.name || ''
+    if (!speciesName) {
+      for (const name of allSpeciesWithCareData) {
+        if (bonsai.name?.includes(name)) {
+          speciesName = name
+          break
+        }
+      }
+    }
+    const normalized = normalizeSpecies(speciesName)
+    if (normalized && !isUnknownSpecies(normalized)) {
+      speciesCounts.set(normalized, (speciesCounts.get(normalized) || 0) + 1)
     }
   })
 

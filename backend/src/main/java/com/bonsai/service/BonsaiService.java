@@ -13,6 +13,7 @@ import com.bonsai.repository.CareLogRepository;
 import com.bonsai.repository.LifecycleEventRepository;
 import com.bonsai.repository.PostRepository;
 import com.bonsai.util.ImageUtil;
+import com.bonsai.util.SpeciesNormalizer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -118,9 +119,12 @@ public class BonsaiService {
 
         if (!bonsais.isEmpty()) {
             Map<String, Long> speciesCount = bonsais.stream()
-                    .filter(b -> b.getSpecies() != null)
+                    .map(b -> {
+                        String speciesName = b.getSpecies() != null ? b.getSpecies().getName() : null;
+                        return SpeciesNormalizer.normalize(speciesName);
+                    })
                     .collect(Collectors.groupingBy(
-                            b -> b.getSpecies().getName(),
+                            speciesName -> speciesName,
                             Collectors.counting()
                     ));
 
