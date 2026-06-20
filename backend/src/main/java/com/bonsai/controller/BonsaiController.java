@@ -4,13 +4,17 @@ import com.bonsai.dto.CareSummary;
 import com.bonsai.dto.Result;
 import com.bonsai.dto.UserBonsaiProfile;
 import com.bonsai.entity.Bonsai;
+import com.bonsai.entity.BonsaiStageImage;
+import com.bonsai.entity.BonsaiStageImage.Stage;
 import com.bonsai.service.BonsaiService;
+import com.bonsai.util.BonsaiValidator.ValidationResult;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/bonsais")
@@ -62,5 +66,62 @@ public class BonsaiController {
     @GetMapping("/{id}/care-summary")
     public Result<CareSummary> getCareSummary(@PathVariable Long id) {
         return Result.success(bonsaiService.getCareSummary(id));
+    }
+
+    @PostMapping("/validate")
+    public Result<ValidationResult> validateBonsai(@RequestBody Bonsai bonsai) {
+        return Result.success(bonsaiService.validateBonsaiData(bonsai));
+    }
+
+    @GetMapping("/{id}/stage-images")
+    public Result<List<BonsaiStageImage>> getStageImages(@PathVariable Long id) {
+        return Result.success(bonsaiService.getStageImages(id));
+    }
+
+    @GetMapping("/{id}/stage-images/grouped")
+    public Result<Map<String, List<BonsaiStageImage>>> getStageImagesGrouped(@PathVariable Long id) {
+        return Result.success(bonsaiService.getStageImagesGrouped(id));
+    }
+
+    @PostMapping("/{id}/stage-images")
+    public Result<BonsaiStageImage> addStageImage(
+            @PathVariable Long id,
+            @RequestBody BonsaiStageImage stageImage) {
+        stageImage.setBonsaiId(id);
+        return Result.success(bonsaiService.addStageImage(stageImage));
+    }
+
+    @PostMapping("/{id}/stage-images/batch")
+    public Result<List<BonsaiStageImage>> addStageImages(
+            @PathVariable Long id,
+            @RequestBody List<BonsaiStageImage> images) {
+        return Result.success(bonsaiService.addStageImages(id, images));
+    }
+
+    @PutMapping("/stage-images/{imageId}")
+    public Result<BonsaiStageImage> updateStageImage(
+            @PathVariable Long imageId,
+            @RequestBody BonsaiStageImage stageImage) {
+        stageImage.setId(imageId);
+        return Result.success(bonsaiService.updateStageImage(stageImage));
+    }
+
+    @DeleteMapping("/stage-images/{imageId}")
+    public Result<Void> deleteStageImage(@PathVariable Long imageId) {
+        bonsaiService.deleteStageImage(imageId);
+        return Result.success();
+    }
+
+    @DeleteMapping("/{id}/stage-images/stage/{stage}")
+    public Result<Void> deleteStageImagesByStage(
+            @PathVariable Long id,
+            @PathVariable String stage) {
+        try {
+            Stage stageEnum = Stage.valueOf(stage);
+            bonsaiService.deleteStageImagesByStage(id, stageEnum);
+            return Result.success();
+        } catch (IllegalArgumentException e) {
+            return Result.error(400, "无效的阶段类型: " + stage);
+        }
     }
 }

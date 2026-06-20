@@ -26,6 +26,7 @@
           <h2 class="bonsai-name">{{ bonsai.name }}</h2>
           <div class="bonsai-tags">
             <van-tag v-if="bonsai.species" type="primary" plain size="small">{{ bonsai.species.name }}</van-tag>
+            <van-tag v-if="bonsai.style" type="danger" plain size="small">{{ bonsai.style.name }}</van-tag>
             <van-tag v-if="bonsai.treeAge" type="success" plain size="small">{{ bonsai.treeAge }}年树龄</van-tag>
             <van-tag v-if="bonsai.potType" type="warning" plain size="small">{{ bonsai.potType }}</van-tag>
           </div>
@@ -80,6 +81,57 @@
             </div>
             <div class="outline-label">盆面</div>
             <div class="outline-value">{{ bonsai.potSurface || '暂无记录' }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="hasStageImages" class="stage-images-section card">
+        <div class="section-title">
+          <van-icon name="photos" />
+          <span>养护阶段变化</span>
+        </div>
+        <div class="stage-tabs">
+          <div
+            v-for="(stage, idx) in availableStages"
+            :key="stage.value"
+            class="stage-tab"
+            :class="{ active: activeStage === stage.value }"
+            :style="activeStage === stage.value ? { borderColor: stage.color, color: stage.color } : {}"
+            @click="activeStage = stage.value"
+          >
+            <span class="stage-tab-icon">{{ stage.icon }}</span>
+            <span>{{ stage.label }}</span>
+          </div>
+        </div>
+        <div class="stage-images-grid">
+          <img
+            v-for="(img, idx) in activeStageImages"
+            :key="idx"
+            :src="getStageImage(img)"
+            class="stage-image"
+            @click="previewStageImage(idx)"
+            @error="onStageImageError(idx)"
+          />
+        </div>
+        <div v-if="activeStageNote" class="stage-note">
+          <van-icon name="description-o" size="12" />
+          <span>{{ activeStageNote }}</span>
+        </div>
+        <div class="stage-progress">
+          <div class="progress-bar">
+            <div
+              v-for="(stage, idx) in STAGE_LIST"
+              :key="stage.value"
+              class="progress-segment"
+              :class="{ filled: hasStage(stage.value) }"
+              :style="hasStage(stage.value) ? { background: stage.color } : {}"
+              :title="stage.label + (hasStage(stage.value) ? '（已有图片）' : '（暂无图片）')"
+            ></div>
+          </div>
+          <div class="progress-labels">
+            <div v-for="stage in STAGE_LIST" :key="stage.value" class="progress-label">
+              <span>{{ stage.icon }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -232,12 +284,13 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { showToast, showConfirmDialog, showImagePreview } from 'vant'
-import { getBonsaiById, deleteBonsai, getCareSummary } from '@/api/bonsai'
+import { getBonsaiById, deleteBonsai, getCareSummary, getStageImages } from '@/api/bonsai'
 import { getEventsByBonsaiId, deleteEvent as deleteEventApi } from '@/api/lifecycleEvent'
 import { getCoverImage, parseImages, getImageWithFallback, BONSAI_PLACEHOLDER_SVG, PLACEHOLDER_SVG } from '@/utils/image'
 import BeforeAfterCompare from '@/components/BeforeAfterCompare.vue'
 import SpeciesCareTip from '@/components/SpeciesCareTip.vue'
 import { useUserStore } from '@/stores/user'
+import { STAGE_LIST, getStageInfo } from '@/utils/bonsaiValidator'
 
 const router = useRouter()
 const route = useRoute()
@@ -258,6 +311,10 @@ const actionOptions = ref([
   { text: '删除', value: 2 }
 ])
 
+const stageImages = ref([])
+const stageImageErrors = ref({})
+const activeStage = ref(STAGE_LIST[0].value)
+
 const eventTypes = [
   { text: '入手', value: 'acquire', icon: 'logistics', color: '#1989fa', tagType: 'primary' },
   { text: '定植', value: 'planting', icon: 'wap-home-o', color: '#07c160', tagType: 'success' },
@@ -271,6 +328,73 @@ const hasOutlineData = computed(() => {
   if (!bonsai.value) return false
   return !!(bonsai.value.trunkShape || bonsai.value.branchSupport || bonsai.value.crownWidth || bonsai.value.potSurface)
 })
+
+const stageImagesGrouped = computed(() => {
+  const grouped = {}
+  STAGE_LIST.forEach(stage => {
+    grouped[stage.value] = []
+  })
+  stageImages.value.forEach(img => {
+    if (grouped[img.stage]) {
+      grouped[img.stage].push(img)
+    }
+  })
+  return grouped
+})
+
+const hasStageImages = computed(() => {
+  return stageImages.value.length > 0
+})
+
+const availableStages = computed(() => {
+  return STAGE_LIST.filter(stage => {
+    return stageImagesGrouped.value[stage.value] && stageImagesGrouped.value[stage.value].length > 0
+  })
+})
+
+const activeStageImages = computed(() => {
+  if (!activeStage.value) return []
+  return stageImagesGrouped.value[activeStage.value] || []
+})
+
+const activeStageNote = computed(() => {
+  const imgs = activeStageImages.value
+  if (imgs.length > 0 && imgs[0].note) {
+    return imgs[0].note
+  }
+  return ''
+})
+
+const hasStage = (stageValue) => {
+  return stageImagesGrouped.value[stageValue] && stageImagesGrouped.value[stageValue].length > 0
+}
+
+const getStageImage = (img) => {
+  const errorKey = `stage_${img.id}`
+  if (stageImageErrors.value[errorKey]) {
+    return PLACEHOLDER_SVG
+  }
+  return getImageWithFallback(img.imageUrl)
+}
+
+const onStageImageError = (imageId) => {
+  const errorKey = `stage_${imageId}`
+  stageImageErrors.value[errorKey] = true
+}
+
+const previewStageImage = (idx) => {
+  const allImages = activeStageImages.value.map(img => {
+    const errorKey = `stage_${img.id}`
+    if (stageImageErrors.value[errorKey]) {
+      return PLACEHOLDER_SVG
+    }
+    return getImageWithFallback(img.imageUrl)
+  })
+  showImagePreview({
+    images: allImages,
+    startPosition: idx
+  })
+}
 
 const formatDate = (date) => {
   if (!date) return ''
@@ -460,6 +584,18 @@ const loadCareSummary = async () => {
   }
 }
 
+const loadStageImages = async () => {
+  try {
+    const id = route.params.id
+    stageImages.value = await getStageImages(id)
+    if (availableStages.value.length > 0) {
+      activeStage.value = availableStages.value[0].value
+    }
+  } catch (e) {
+    console.warn('加载阶段图片失败', e)
+  }
+}
+
 const goBack = () => {
   router.back()
 }
@@ -515,6 +651,7 @@ onMounted(() => {
   loadBonsai()
   loadEvents()
   loadCareSummary()
+  loadStageImages()
 })
 </script>
 
@@ -940,5 +1077,147 @@ onMounted(() => {
   .care-summary-grid {
     grid-template-columns: 1fr 1fr;
   }
+}
+
+.stage-images-section {
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
+}
+
+.stage-images-section .section-title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-lg);
+  padding-left: var(--spacing-sm);
+  border-left: 3px solid #409eff;
+}
+
+.stage-tabs {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+  overflow-x: auto;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.stage-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.stage-tab {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.stage-tab.active {
+  background: #f0f7ff;
+  border-width: 2px;
+  font-weight: 600;
+}
+
+.stage-tab-icon {
+  font-size: 14px;
+}
+
+.stage-images-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+}
+
+.stage-image {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.stage-image:active {
+  transform: scale(0.95);
+}
+
+@media (max-width: 360px) {
+  .stage-images-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.stage-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-xs);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-md);
+  line-height: 1.5;
+}
+
+.stage-progress {
+  margin-top: var(--spacing-md);
+  padding-top: var(--spacing-md);
+  border-top: 1px dashed var(--color-border);
+}
+
+.progress-bar {
+  display: flex;
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--color-bg-secondary);
+  margin-bottom: 8px;
+}
+
+.progress-segment {
+  flex: 1;
+  background: var(--color-border);
+  transition: background 0.3s;
+  margin-right: 2px;
+}
+
+.progress-segment:last-child {
+  margin-right: 0;
+}
+
+.progress-segment.filled {
+  background: var(--color-primary);
+}
+
+.progress-labels {
+  display: flex;
+  justify-content: space-between;
+}
+
+.progress-label {
+  flex: 1;
+  text-align: center;
+  font-size: 12px;
+  opacity: 0.5;
+  transition: opacity 0.3s;
+}
+
+.progress-label:has(+ .progress-label .progress-segment.filled),
+.progress-label:nth-child(1):has(~ .progress-label:nth-child(2) .progress-segment.filled) {
+  opacity: 1;
 }
 </style>

@@ -75,6 +75,13 @@ public class Bonsai {
     @Column(name = "pot_surface", length = 200)
     private String potSurface;
 
+    @Column(name = "style_id")
+    private Long styleId;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "style_id", insertable = false, updatable = false)
+    private Category style;
+
     @Min(value = 0, message = "浏览次数不能为负数")
     @Column(name = "view_count")
     private Integer viewCount = 0;
