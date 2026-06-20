@@ -37,8 +37,8 @@ public class LifecycleEventController {
     }
 
     @DeleteMapping("/{id}")
-    public Result<Void> deleteEvent(@PathVariable Long id) {
-        lifecycleEventService.deleteEvent(id);
+    public Result<Void> deleteEvent(@PathVariable Long id, @RequestParam Long userId) {
+        lifecycleEventService.deleteEvent(id, userId);
         return Result.success();
     }
 }

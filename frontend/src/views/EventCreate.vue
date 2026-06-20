@@ -104,9 +104,11 @@ import { useRouter, useRoute } from 'vue-router'
 import { showToast } from 'vant'
 import { createEvent } from '@/api/lifecycleEvent'
 import { validateImageFile, uploadSingleImage } from '@/api/upload'
+import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
 const route = useRoute()
+const userStore = useUserStore()
 
 const eventTypes = [
   { text: '入手', value: 'acquire' },
@@ -184,6 +186,7 @@ const onSubmit = async () => {
 
     const data = {
       bonsaiId: Number(route.params.id),
+      userId: userStore.currentUser.id,
       ...form
     }
 

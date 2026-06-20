@@ -16,6 +16,6 @@ export function updateEvent(data) {
   return request.put('/lifecycle-events', data)
 }
 
-export function deleteEvent(id) {
-  return request.delete(`/lifecycle-events/${id}`)
+export function deleteEvent(id, userId) {
+  return request.delete(`/lifecycle-events/${id}`, { params: { userId } })
 }

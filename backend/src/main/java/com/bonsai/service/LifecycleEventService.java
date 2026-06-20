@@ -1,6 +1,8 @@
 package com.bonsai.service;
 
+import com.bonsai.entity.Bonsai;
 import com.bonsai.entity.LifecycleEvent;
+import com.bonsai.repository.BonsaiRepository;
 import com.bonsai.repository.LifecycleEventRepository;
 import com.bonsai.util.ImageUtil;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +21,7 @@ public class LifecycleEventService {
     );
 
     private final LifecycleEventRepository lifecycleEventRepository;
+    private final BonsaiRepository bonsaiRepository;
     private final ImageUtil imageUtil;
 
     public List<LifecycleEvent> getEventsByBonsaiId(Long bonsaiId) {
@@ -31,25 +34,49 @@ public class LifecycleEventService {
 
     public LifecycleEvent createEvent(LifecycleEvent event) {
         validateEventType(event.getEventType());
+        validateBonsaiOwnership(event.getBonsaiId(), event.getUserId());
         return lifecycleEventRepository.save(event);
     }
 
     public LifecycleEvent updateEvent(LifecycleEvent event) {
         validateEventType(event.getEventType());
+        LifecycleEvent existingEvent = lifecycleEventRepository.findById(event.getId()).orElse(null);
+        if (existingEvent == null) {
+            throw new IllegalArgumentException("事件不存在");
+        }
+        validateBonsaiOwnership(existingEvent.getBonsaiId(), event.getUserId());
+        event.setBonsaiId(existingEvent.getBonsaiId());
         return lifecycleEventRepository.save(event);
     }
 
     @Transactional
-    public void deleteEvent(Long id) {
+    public void deleteEvent(Long id, Long userId) {
         LifecycleEvent event = lifecycleEventRepository.findById(id).orElse(null);
         if (event == null) {
-            return;
+            throw new IllegalArgumentException("事件不存在");
         }
+        validateBonsaiOwnership(event.getBonsaiId(), userId);
 
         imageUtil.deleteImages(event.getImages());
         imageUtil.deleteImages(event.getBeforeImages());
 
         lifecycleEventRepository.deleteById(id);
+    }
+
+    private void validateBonsaiOwnership(Long bonsaiId, Long userId) {
+        if (bonsaiId == null) {
+            throw new IllegalArgumentException("盆景ID不能为空");
+        }
+        if (userId == null) {
+            throw new IllegalArgumentException("用户ID不能为空");
+        }
+        Bonsai bonsai = bonsaiRepository.findById(bonsaiId).orElse(null);
+        if (bonsai == null) {
+            throw new IllegalArgumentException("盆景不存在，ID: " + bonsaiId);
+        }
+        if (!userId.equals(bonsai.getUserId())) {
+            throw new IllegalArgumentException("无权操作该盆景的生命周期事件");
+        }
     }
 
     private void validateEventType(String eventType) {

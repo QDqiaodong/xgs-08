@@ -8,6 +8,8 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+import jakarta.persistence.Transient;
+
 @Data
 @Entity
 @Table(name = "lifecycle_events")
@@ -43,15 +45,18 @@ public class LifecycleEvent {
     @Column(name = "event_date", nullable = false)
     private LocalDate eventDate;
 
-    @Size(max = 2000, message = "图片数据长度不能超过2000个字符")
-    @Column(length = 1000)
+    @Size(max = 10000, message = "图片数据长度不能超过10000个字符")
+    @Column(columnDefinition = "TEXT")
     private String images;
 
-    @Size(max = 2000, message = "造型前图片数据长度不能超过2000个字符")
-    @Column(name = "before_images", length = 1000)
+    @Size(max = 10000, message = "造型前图片数据长度不能超过10000个字符")
+    @Column(name = "before_images", columnDefinition = "TEXT")
     private String beforeImages;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    @Transient
+    private Long userId;
 }

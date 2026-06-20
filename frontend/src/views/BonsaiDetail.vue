@@ -237,9 +237,11 @@ import { getEventsByBonsaiId, deleteEvent as deleteEventApi } from '@/api/lifecy
 import { getCoverImage, parseImages, getImageWithFallback, BONSAI_PLACEHOLDER_SVG, PLACEHOLDER_SVG } from '@/utils/image'
 import BeforeAfterCompare from '@/components/BeforeAfterCompare.vue'
 import SpeciesCareTip from '@/components/SpeciesCareTip.vue'
+import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
 const route = useRoute()
+const userStore = useUserStore()
 
 const activeFooter = ref(1)
 const loading = ref(false)
@@ -499,7 +501,7 @@ const deleteEvent = async (event, index) => {
       title: '确认删除',
       message: '确定要删除这条生命周期记录吗？'
     })
-    await deleteEventApi(event.id)
+    await deleteEventApi(event.id, userStore.currentUser.id)
     events.value.splice(index, 1)
     showToast('删除成功')
   } catch (e) {
