@@ -2,10 +2,14 @@
   <div class="profile-page page-container">
     <div class="profile-header">
       <div class="user-info">
-        <div class="user-avatar">{{ user.nickname?.charAt(0) || '用' }}</div>
+        <div class="user-avatar" v-if="user.avatar">
+          <img :src="user.avatar" :alt="user.nickname || user.username" />
+        </div>
+        <div class="user-avatar" v-else>{{ user.nickname?.charAt(0) || user.username?.charAt(0) || '用' }}</div>
         <div class="user-detail">
           <h2 class="nickname">{{ user.nickname || user.username }}</h2>
           <p class="bio" v-if="user.bio">{{ user.bio }}</p>
+          <p class="bio" v-else style="opacity:0.7;">这个人很懒，还没有填写简介</p>
         </div>
       </div>
       <div class="user-stats">
@@ -271,7 +275,8 @@ const goRepresentativeWork = () => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  await userStore.fetchCurrentUser(true)
   loadMyPosts()
   loadMyLogs()
   loadBonsaiProfile()
@@ -308,6 +313,13 @@ onMounted(() => {
   font-size: 26px;
   font-weight: var(--font-weight-bold);
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .user-detail {

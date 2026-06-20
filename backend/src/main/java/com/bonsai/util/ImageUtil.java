@@ -5,12 +5,15 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
@@ -27,6 +30,10 @@ public class ImageUtil {
 
     private static final Set<String> ALLOWED_MIME_TYPES = new HashSet<>(Arrays.asList(
             "image/jpeg", "image/png", "image/gif", "image/bmp", "image/webp"
+    ));
+
+    private static final Set<String> THUMBNAIL_NATIVE_FORMATS = new HashSet<>(Arrays.asList(
+            ".jpg", ".jpeg", ".png"
     ));
 
     private static final long MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -129,7 +136,8 @@ public class ImageUtil {
         String datePath = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd"));
         String originalFilename = file.getOriginalFilename();
         String extension = originalFilename.substring(originalFilename.lastIndexOf(".")).toLowerCase();
-        String fileName = UUID.randomUUID().toString() + extension;
+        String fileBaseName = UUID.randomUUID().toString();
+        String fileName = fileBaseName + extension;
 
         Path originalDir = Paths.get(uploadPath, "original", datePath);
         Path thumbnailDir = Paths.get(uploadPath, "thumbnail", datePath);
@@ -138,17 +146,65 @@ public class ImageUtil {
         Files.createDirectories(thumbnailDir);
 
         Path originalPath = originalDir.resolve(fileName);
-        Path thumbnailPath = thumbnailDir.resolve(fileName);
-
         file.transferTo(originalPath.toFile());
 
-        Thumbnails.of(originalPath.toFile())
-                .size(thumbnailWidth, thumbnailHeight)
-                .outputQuality(quality)
-                .toFile(thumbnailPath.toFile());
+        String thumbnailFileName;
+        Path thumbnailPath;
+        boolean thumbnailGenerated = false;
+
+        if (THUMBNAIL_NATIVE_FORMATS.contains(extension)) {
+            thumbnailFileName = fileBaseName + extension;
+            thumbnailPath = thumbnailDir.resolve(thumbnailFileName);
+            try {
+                Thumbnails.of(originalPath.toFile())
+                        .size(thumbnailWidth, thumbnailHeight)
+                        .outputQuality(quality)
+                        .toFile(thumbnailPath.toFile());
+                thumbnailGenerated = true;
+            } catch (Exception e) {
+                thumbnailGenerated = false;
+            }
+        }
+
+        if (!thumbnailGenerated) {
+            thumbnailFileName = fileBaseName + ".jpg";
+            thumbnailPath = thumbnailDir.resolve(thumbnailFileName);
+            try {
+                BufferedImage originalImage = ImageIO.read(originalPath.toFile());
+                if (originalImage != null) {
+                    int type = originalImage.getType() == 0 ? BufferedImage.TYPE_INT_RGB : originalImage.getType();
+                    BufferedImage rgbImage = new BufferedImage(
+                            originalImage.getWidth(),
+                            originalImage.getHeight(),
+                            type
+                    );
+                    rgbImage.createGraphics().drawImage(originalImage, 0, 0, null);
+
+                    Thumbnails.of(rgbImage)
+                            .size(thumbnailWidth, thumbnailHeight)
+                            .outputFormat("jpg")
+                            .outputQuality(quality)
+                            .toFile(thumbnailPath.toFile());
+                    thumbnailGenerated = true;
+                }
+            } catch (Exception e) {
+                thumbnailGenerated = false;
+            }
+        }
+
+        if (!thumbnailGenerated) {
+            thumbnailFileName = fileBaseName + extension;
+            thumbnailPath = thumbnailDir.resolve(thumbnailFileName);
+            try {
+                Files.copy(originalPath, thumbnailPath, StandardCopyOption.REPLACE_EXISTING);
+                thumbnailGenerated = true;
+            } catch (Exception e) {
+                throw new IOException("缩略图生成失败，请尝试使用 JPG 或 PNG 格式的图片");
+            }
+        }
 
         String originalUrl = urlPrefix + "/original/" + datePath + "/" + fileName;
-        String thumbnailUrl = urlPrefix + "/thumbnail/" + datePath + "/" + fileName;
+        String thumbnailUrl = urlPrefix + "/thumbnail/" + datePath + "/" + thumbnailFileName;
 
         return new String[]{originalUrl, thumbnailUrl};
     }
@@ -162,6 +218,14 @@ public class ImageUtil {
             String thumbPath = relativePath.replace("/original/", "/thumbnail/");
             Path thumbFilePath = Paths.get(uploadPath, thumbPath);
             Files.deleteIfExists(thumbFilePath);
+
+            if (relativePath.contains("/original/")) {
+                String basePath = thumbPath.substring(0, thumbPath.lastIndexOf("."));
+                Path jpgThumbPath = Paths.get(uploadPath, basePath + ".jpg");
+                Files.deleteIfExists(jpgThumbPath);
+                Path pngThumbPath = Paths.get(uploadPath, basePath + ".png");
+                Files.deleteIfExists(pngThumbPath);
+            }
         } catch (Exception e) {
         }
     }
