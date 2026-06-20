@@ -148,7 +148,7 @@ public class ImageUtil {
         Path originalPath = originalDir.resolve(fileName);
         file.transferTo(originalPath.toFile());
 
-        String thumbnailFileName;
+        String thumbnailFileName = fileBaseName + extension;
         Path thumbnailPath;
         boolean thumbnailGenerated = false;
 
