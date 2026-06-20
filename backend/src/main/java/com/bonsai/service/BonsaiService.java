@@ -15,6 +15,7 @@ import com.bonsai.repository.BonsaiStageImageRepository;
 import com.bonsai.repository.CareLogRepository;
 import com.bonsai.repository.LifecycleEventRepository;
 import com.bonsai.repository.PostRepository;
+import com.bonsai.repository.RepotRecordRepository;
 import com.bonsai.util.BonsaiValidator;
 import com.bonsai.util.BonsaiValidator.ValidationResult;
 import com.bonsai.util.ImageUtil;
@@ -43,6 +44,7 @@ public class BonsaiService {
     private final LifecycleEventRepository lifecycleEventRepository;
     private final CareLogRepository careLogRepository;
     private final PostRepository postRepository;
+    private final RepotRecordRepository repotRecordRepository;
     private final BonsaiValidator bonsaiValidator;
     private final ImageUtil imageUtil;
 
@@ -116,6 +118,7 @@ public class BonsaiService {
 
         stageImageRepository.deleteByBonsaiId(id);
         lifecycleEventRepository.deleteByBonsaiId(id);
+        repotRecordRepository.deleteByBonsaiId(id);
         bonsaiRepository.deleteById(id);
     }
 

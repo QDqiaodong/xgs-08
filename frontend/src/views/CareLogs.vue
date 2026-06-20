@@ -11,6 +11,78 @@
         <van-tabs v-model:active="activeTab">
           <van-tab title="全部记录">
             <div class="logs-by-type">
+              <div class="watering-reminder-section card">
+                <div class="reminder-section-header">
+                  <div class="section-title">
+                    <van-icon name="down" color="#1989fa" />
+                    <span>浇水提醒</span>
+                  </div>
+                  <span v-if="urgentCount > 0" class="urgent-badge">{{ urgentCount }}盆待浇水</span>
+                </div>
+
+                <div v-if="remindersLoading" class="loading-wrapper">
+                  <van-loading size="20px">加载中...</van-loading>
+                </div>
+
+                <div v-else-if="wateringReminders.length === 0" class="reminder-empty">
+                  <van-icon name="flower-o" class="empty-icon" />
+                  <span class="empty-text">还没有添加盆景，快去添加吧</span>
+                </div>
+
+                <div v-else class="reminder-list">
+                  <div
+                    v-for="reminder in wateringReminders"
+                    :key="reminder.bonsaiId"
+                    class="reminder-card"
+                    :class="'reminder-' + reminder.status"
+                    @click="goToBonsaiDetail(reminder.bonsaiId)"
+                  >
+                    <div class="reminder-cover">
+                      <img
+                        :src="getReminderCover(reminder)"
+                        :alt="reminder.bonsaiName"
+                        class="cover-img"
+                      />
+                    </div>
+                    <div class="reminder-info">
+                      <div class="reminder-name-row">
+                        <h4 class="reminder-name">{{ reminder.bonsaiName }}</h4>
+                        <van-tag
+                          :style="{ background: getStatusInfo(reminder.status).bgColor, color: getStatusInfo(reminder.status).color }"
+                          size="small"
+                          plain
+                        >
+                          <van-icon :name="getStatusInfo(reminder.status).icon" size="10" />
+                          {{ getStatusInfo(reminder.status).text }}
+                        </van-tag>
+                      </div>
+                      <div class="reminder-meta">
+                        <span v-if="reminder.speciesName" class="meta-item">{{ reminder.speciesName }}</span>
+                        <span v-if="reminder.potType" class="meta-item">{{ reminder.potType }}</span>
+                      </div>
+                      <div class="reminder-dates">
+                        <div class="date-item">
+                          <span class="date-label">上次浇水</span>
+                          <span class="date-value">{{ reminder.lastWaterDate || '暂无记录' }}</span>
+                        </div>
+                        <div class="date-item next-water">
+                          <span class="date-label">下次浇水</span>
+                          <span class="date-value">{{ getDaysText(reminder.daysUntilNextWater) }}</span>
+                        </div>
+                      </div>
+                      <div class="reminder-reason" v-if="reminder.adjustmentReason">
+                        <van-icon name="info-o" size="10" />
+                        <span>{{ reminder.adjustmentReason }}</span>
+                      </div>
+                    </div>
+                    <div class="reminder-action" @click.stop="quickWater(reminder)">
+                      <van-icon name="down" size="20" />
+                      <span>已浇水</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div v-if="careLogs.length === 0 && !loading" class="empty-state">
                 <van-icon name="notes-o" class="empty-icon" />
                 <span class="empty-text">暂无养护记录</span>
@@ -382,19 +454,24 @@
 
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import { getUserCareLogs, createCareLog } from '@/api/careLog'
 import { getUserBonsaiList } from '@/api/bonsai'
+import { getUserWateringReminders } from '@/api/wateringReminder'
 import { useUserStore } from '@/stores/user'
 import { getCareTips, groupLogsBySolarTerm, SEASON_ORDER } from '@/utils/solarTerms'
 import { validateImageFile, uploadSingleImage } from '@/api/upload'
 
 const userStore = useUserStore()
+const router = useRouter()
 
 const activeTab = ref(0)
 const activeFooter = ref(3)
 const loading = ref(false)
 const careLogs = ref([])
+const wateringReminders = ref([])
+const remindersLoading = ref(false)
 const showAddDialog = ref(false)
 const showTypePicker = ref(false)
 const showBonsaiPicker = ref(false)
@@ -485,6 +562,12 @@ const displaySeasons = computed(() => {
   return [selectedSeason.value]
 })
 
+const urgentCount = computed(() => {
+  return wateringReminders.value.filter(r => 
+    r.status === 'overdue' || r.status === 'urgent' || r.status === 'today'
+  ).length
+})
+
 const getLogTypeName = (type) => {
   const found = logTypes.find(t => t.value === type)
   return found ? found.text : type
@@ -562,6 +645,67 @@ const loadBonsaiList = async () => {
     bonsaiList.value = await getUserBonsaiList(userStore.currentUser.id)
   } catch (e) {
     console.warn('加载盆景列表失败', e)
+  }
+}
+
+const loadWateringReminders = async () => {
+  remindersLoading.value = true
+  try {
+    wateringReminders.value = await getUserWateringReminders(userStore.currentUser.id)
+  } catch (e) {
+    console.warn('加载浇水提醒失败', e)
+  } finally {
+    remindersLoading.value = false
+  }
+}
+
+const getStatusInfo = (status) => {
+  const statusMap = {
+    overdue: { text: '已逾期', color: '#ee0a24', bgColor: 'rgba(238, 10, 36, 0.1)', icon: 'warning-o' },
+    urgent: { text: '急需浇水', color: '#ff976a', bgColor: 'rgba(255, 151, 106, 0.1)', icon: 'info-o' },
+    today: { text: '今天浇水', color: '#ff976a', bgColor: 'rgba(255, 151, 106, 0.1)', icon: 'clock-o' },
+    soon: { text: '明天浇水', color: '#ff976a', bgColor: 'rgba(255, 151, 106, 0.1)', icon: 'clock-o' },
+    normal: { text: '浇水正常', color: '#07c160', bgColor: 'rgba(7, 193, 96, 0.1)', icon: 'success' }
+  }
+  return statusMap[status] || statusMap.normal
+}
+
+const getDaysText = (days) => {
+  if (days < 0) {
+    return `逾期${Math.abs(days)}天`
+  } else if (days === 0) {
+    return '今天'
+  } else if (days === 1) {
+    return '明天'
+  } else {
+    return `${days}天后`
+  }
+}
+
+const getReminderCover = (reminder) => {
+  return reminder.bonsaiCoverImage || 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=bonsai%20tree%20in%20pot%20minimalist&image_size=square'
+}
+
+const goToBonsaiDetail = (bonsaiId) => {
+  router.push(`/bonsais/${bonsaiId}`)
+}
+
+const quickWater = async (reminder) => {
+  try {
+    await createCareLog({
+      userId: userStore.currentUser.id,
+      bonsaiId: reminder.bonsaiId,
+      logType: 'water',
+      logDate: new Date().toISOString().split('T')[0],
+      content: '快速记录浇水'
+    })
+    showToast('已记录浇水')
+    await Promise.all([
+      loadLogs(),
+      loadWateringReminders()
+    ])
+  } catch (e) {
+    showToast('记录失败')
   }
 }
 
@@ -645,7 +789,10 @@ const submitLog = async () => {
     })
     showAddDialog.value = false
     showToast('记录成功')
-    await loadLogs()
+    await Promise.all([
+      loadLogs(),
+      loadWateringReminders()
+    ])
   } catch (e) {
     showToast(e?.message || '记录失败')
   } finally {
@@ -678,6 +825,7 @@ const resetLogForm = () => {
 onMounted(() => {
   loadLogs()
   loadBonsaiList()
+  loadWateringReminders()
 })
 </script>
 
@@ -1368,5 +1516,229 @@ onMounted(() => {
 
 .panel-footer :deep(.van-button) {
   box-shadow: 0 4px 12px rgba(7, 193, 96, 0.3);
+}
+
+.watering-reminder-section {
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+}
+
+.reminder-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-md);
+}
+
+.reminder-section-header .section-title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  padding-left: var(--spacing-sm);
+  border-left: 3px solid #1989fa;
+}
+
+.urgent-badge {
+  background: linear-gradient(135deg, #ee0a24 0%, #ff6b6b 100%);
+  color: #fff;
+  font-size: var(--font-size-xs);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: var(--font-weight-medium);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.reminder-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--spacing-2xl);
+  color: var(--color-text-tertiary);
+}
+
+.reminder-empty .empty-icon {
+  font-size: 48px;
+  margin-bottom: var(--spacing-sm);
+  opacity: 0.5;
+}
+
+.reminder-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.reminder-card {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.reminder-card:active {
+  transform: scale(0.98);
+}
+
+.reminder-card.reminder-overdue {
+  border-color: rgba(238, 10, 36, 0.3);
+  background: rgba(238, 10, 36, 0.05);
+}
+
+.reminder-card.reminder-urgent,
+.reminder-card.reminder-today,
+.reminder-card.reminder-soon {
+  border-color: rgba(255, 151, 106, 0.3);
+  background: rgba(255, 151, 106, 0.05);
+}
+
+.reminder-card.reminder-normal {
+  border-color: rgba(7, 193, 96, 0.2);
+}
+
+.reminder-cover {
+  width: 60px;
+  height: 60px;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.reminder-cover .cover-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.reminder-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.reminder-name-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  margin-bottom: 4px;
+}
+
+.reminder-name {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reminder-meta {
+  display: flex;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-xs);
+  flex-wrap: wrap;
+}
+
+.meta-item {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  background: var(--color-bg-secondary);
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+}
+
+.reminder-dates {
+  display: flex;
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-xs);
+}
+
+.date-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.date-label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+.date-value {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-medium);
+}
+
+.date-item.next-water .date-value {
+  color: #1989fa;
+}
+
+.reminder-card.reminder-overdue .date-item.next-water .date-value,
+.reminder-card.reminder-urgent .date-item.next-water .date-value,
+.reminder-card.reminder-today .date-item.next-water .date-value {
+  color: #ee0a24;
+}
+
+.reminder-reason {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+.reminder-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1989fa 0%, #4169E1 100%);
+  color: #fff;
+  font-size: var(--font-size-xs);
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: 0 2px 8px rgba(25, 137, 250, 0.3);
+}
+
+.reminder-action:active {
+  transform: scale(0.9);
+}
+
+.reminder-action .van-icon {
+  margin-bottom: 2px;
+}
+
+@media (max-width: 360px) {
+  .reminder-cover {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .reminder-action {
+    width: 44px;
+    height: 44px;
+  }
+  
+  .reminder-dates {
+    gap: var(--spacing-sm);
+  }
 }
 </style>

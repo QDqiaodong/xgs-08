@@ -268,6 +268,115 @@
           </div>
         </div>
       </div>
+
+      <div v-if="repotRecords.length > 0" class="repot-history-section card">
+        <div class="repot-history-header">
+          <div class="section-title">
+            <van-icon name="exchange" />
+            <span>根系与盆器调整历史</span>
+          </div>
+          <span class="repot-count">共 {{ repotRecords.length }} 次</span>
+        </div>
+
+        <div class="repot-timeline">
+          <div
+            v-for="(record, index) in repotRecords"
+            :key="record.id"
+            class="repot-timeline-item"
+          >
+            <div class="repot-timeline-left">
+              <div class="repot-dot">
+                <van-icon name="flower-o" color="#fff" size="14" />
+              </div>
+              <div v-if="index < repotRecords.length - 1" class="repot-timeline-line"></div>
+            </div>
+            <div class="repot-timeline-content">
+              <div class="repot-card">
+                <div class="repot-header">
+                  <div class="repot-date-badge">
+                    <van-icon name="calendar-o" size="12" />
+                    <span>{{ record.repotDate }}</span>
+                  </div>
+                  <van-tag type="danger" size="small" plain>换盆</van-tag>
+                </div>
+                <h4 v-if="record.title" class="repot-title">{{ record.title }}</h4>
+
+                <div class="repot-detail-grid">
+                  <div v-if="record.soilType" class="repot-detail-item">
+                    <div class="detail-icon soil-icon">
+                      <van-icon name="wap-home-o" size="16" />
+                    </div>
+                    <div class="detail-content">
+                      <div class="detail-label">用土</div>
+                      <div class="detail-value">{{ record.soilType }}</div>
+                    </div>
+                  </div>
+                  <div v-if="record.oldPot || record.newPot" class="repot-detail-item">
+                    <div class="detail-icon pot-icon">
+                      <van-icon name="balance-o" size="16" />
+                    </div>
+                    <div class="detail-content">
+                      <div class="detail-label">盆器变化</div>
+                      <div class="detail-value">
+                        <span v-if="record.oldPot">{{ record.oldPot }}</span>
+                        <van-icon name="arrow" size="12" style="margin: 0 4px;" />
+                        <span v-if="record.newPot" class="new-pot">{{ record.newPot }}</span>
+                        <span v-else class="new-pot">不变</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div v-if="record.rootPruning" class="repot-detail-item full-width">
+                    <div class="detail-icon root-icon">
+                      <van-icon name="scissors-o" size="16" />
+                    </div>
+                    <div class="detail-content">
+                      <div class="detail-label">修根情况</div>
+                      <div class="detail-value">{{ record.rootPruning }}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div v-if="hasRootCompare(record)" class="root-compare-section">
+                  <div class="compare-section-header">
+                    <van-icon name="eye-o" />
+                    <span>根系处理前后对照</span>
+                  </div>
+                  <BeforeAfterCompare
+                    v-for="(pair, pairIndex) in getRootComparePairs(record)"
+                    :key="pairIndex"
+                    :before-image="pair.before"
+                    :after-image="pair.after"
+                    before-label="修根前"
+                    after-label="修根后"
+                    event-type="repotting"
+                    class="compare-item"
+                  />
+                </div>
+
+                <div v-if="getRepotImages(record).length > 0 && !hasRootCompare(record)" class="repot-images">
+                  <img
+                    v-for="(img, imgIndex) in getRepotImages(record)"
+                    :key="imgIndex"
+                    :src="img"
+                    class="repot-image"
+                    @click="previewRepotImage(index, imgIndex)"
+                  />
+                </div>
+
+                <p v-if="record.notes" class="repot-notes">{{ record.notes }}</p>
+
+                <div class="repot-actions">
+                  <van-button
+                    type="default"
+                    size="small"
+                    @click="deleteRepotRecord(record, index)"
+                  >删除</van-button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <van-tabbar v-model:active="activeFooter" route fixed placeholder>
@@ -286,6 +395,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { showToast, showConfirmDialog, showImagePreview } from 'vant'
 import { getBonsaiById, deleteBonsai, getCareSummary, getStageImages } from '@/api/bonsai'
 import { getEventsByBonsaiId, deleteEvent as deleteEventApi } from '@/api/lifecycleEvent'
+import { getBonsaiRepotRecords, deleteRepotRecord as deleteRepotRecordApi } from '@/api/repotRecord'
 import { getCoverImage, parseImages, getImageWithFallback, BONSAI_PLACEHOLDER_SVG, PLACEHOLDER_SVG } from '@/utils/image'
 import BeforeAfterCompare from '@/components/BeforeAfterCompare.vue'
 import SpeciesCareTip from '@/components/SpeciesCareTip.vue'
@@ -301,6 +411,7 @@ const loading = ref(false)
 const bonsai = ref(null)
 const events = ref([])
 const careSummary = ref(null)
+const repotRecords = ref([])
 const actionValue = ref(0)
 const coverError = ref(false)
 const eventImageErrors = ref({})
@@ -596,6 +707,85 @@ const loadStageImages = async () => {
   }
 }
 
+const loadRepotRecords = async () => {
+  try {
+    const id = route.params.id
+    repotRecords.value = await getBonsaiRepotRecords(id)
+  } catch (e) {
+    console.warn('加载换盆记录失败', e)
+  }
+}
+
+const deleteRepotRecord = async (record, index) => {
+  try {
+    await showConfirmDialog({
+      title: '确认删除',
+      message: '确定要删除这条换盆记录吗？'
+    })
+    await deleteRepotRecordApi(record.id)
+    repotRecords.value.splice(index, 1)
+    showToast('删除成功')
+  } catch (e) {
+    if (e !== 'cancel') {
+      showToast('删除失败')
+    }
+  }
+}
+
+const getRepotImages = (record) => {
+  const images = parseImages(record.images)
+  return images.map(img => getImageWithFallback(img))
+}
+
+const getRepotBeforeImages = (record) => {
+  const images = parseImages(record.beforeRootImages)
+  return images.map(img => getImageWithFallback(img))
+}
+
+const getRepotAfterImages = (record) => {
+  const images = parseImages(record.afterRootImages)
+  return images.map(img => getImageWithFallback(img))
+}
+
+const hasRootCompare = (record) => {
+  const beforeImages = getRepotBeforeImages(record)
+  const afterImages = getRepotAfterImages(record)
+  return beforeImages.length > 0 && afterImages.length > 0
+}
+
+const getRootComparePairs = (record) => {
+  const beforeImages = getRepotBeforeImages(record)
+  const afterImages = getRepotAfterImages(record)
+  const pairs = []
+  const maxLen = Math.max(beforeImages.length, afterImages.length)
+  
+  for (let i = 0; i < maxLen; i++) {
+    pairs.push({
+      before: beforeImages[i] || beforeImages[beforeImages.length - 1],
+      after: afterImages[i] || afterImages[afterImages.length - 1]
+    })
+  }
+  
+  return pairs
+}
+
+const previewRepotImage = (recordIndex, imgIndex) => {
+  const allImages = []
+  let startPosition = 0
+  for (let i = 0; i < repotRecords.value.length; i++) {
+    const imgs = getRepotImages(repotRecords.value[i])
+    if (i < recordIndex) {
+      startPosition += imgs.length
+    }
+    allImages.push(...imgs)
+  }
+  startPosition += imgIndex
+  showImagePreview({
+    images: allImages,
+    startPosition: startPosition
+  })
+}
+
 const goBack = () => {
   router.back()
 }
@@ -652,6 +842,7 @@ onMounted(() => {
   loadEvents()
   loadCareSummary()
   loadStageImages()
+  loadRepotRecords()
 })
 </script>
 
@@ -1219,5 +1410,231 @@ onMounted(() => {
 .progress-label:has(+ .progress-label .progress-segment.filled),
 .progress-label:nth-child(1):has(~ .progress-label:nth-child(2) .progress-segment.filled) {
   opacity: 1;
+}
+
+.repot-history-section {
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
+}
+
+.repot-history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-lg);
+}
+
+.repot-history-header .section-title {
+  margin-bottom: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  padding-left: var(--spacing-sm);
+  border-left: 3px solid #ee0a24;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.repot-count {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+  background: var(--color-bg-secondary);
+  padding: 2px 8px;
+  border-radius: var(--radius-xs);
+}
+
+.repot-timeline {
+  position: relative;
+  padding-left: 4px;
+}
+
+.repot-timeline-item {
+  display: flex;
+  padding-bottom: var(--spacing-lg);
+}
+
+.repot-timeline-item:last-child {
+  padding-bottom: 0;
+}
+
+.repot-timeline-left {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 40px;
+  flex-shrink: 0;
+}
+
+.repot-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  z-index: 1;
+  background: linear-gradient(135deg, #ee0a24 0%, #ff6b6b 100%);
+  box-shadow: 0 2px 4px rgba(238, 10, 36, 0.2);
+}
+
+.repot-timeline-line {
+  width: 2px;
+  flex: 1;
+  background: #ee0a24;
+  opacity: 0.3;
+  margin-top: var(--spacing-xs);
+}
+
+.repot-timeline-content {
+  flex: 1;
+  padding-left: var(--spacing-sm);
+  padding-top: 4px;
+}
+
+.repot-card {
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  border: 1px solid rgba(238, 10, 36, 0.1);
+}
+
+.repot-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-sm);
+}
+
+.repot-date-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-xs);
+  color: #ee0a24;
+  background: rgba(238, 10, 36, 0.1);
+  padding: 4px 8px;
+  border-radius: var(--radius-xs);
+}
+
+.repot-title {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  margin: 0 0 var(--spacing-sm) 0;
+}
+
+.repot-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+}
+
+.repot-detail-item {
+  display: flex;
+  gap: var(--spacing-sm);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-sm);
+}
+
+.repot-detail-item.full-width {
+  grid-column: 1 / -1;
+}
+
+.detail-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.soil-icon {
+  background: rgba(139, 90, 43, 0.15);
+  color: #8B5A2B;
+}
+
+.pot-icon {
+  background: rgba(205, 133, 63, 0.15);
+  color: #CD853F;
+}
+
+.root-icon {
+  background: rgba(238, 10, 36, 0.1);
+  color: #ee0a24;
+}
+
+.detail-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.detail-label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  margin-bottom: 2px;
+}
+
+.detail-value {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  line-height: 1.4;
+  word-break: break-all;
+}
+
+.new-pot {
+  color: #ee0a24;
+  font-weight: var(--font-weight-medium);
+}
+
+.root-compare-section {
+  margin-bottom: var(--spacing-md);
+}
+
+.repot-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-sm);
+}
+
+.repot-image {
+  width: 80px;
+  height: 80px;
+  border-radius: var(--radius-xs);
+  object-fit: cover;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.repot-image:active {
+  transform: scale(0.95);
+}
+
+.repot-notes {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-base);
+  margin: 0 0 var(--spacing-sm) 0;
+  padding: var(--spacing-sm);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-sm);
+  border-left: 2px solid #ee0a24;
+}
+
+.repot-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+@media (max-width: 360px) {
+  .repot-detail-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
