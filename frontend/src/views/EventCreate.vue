@@ -6,7 +6,7 @@
       <van-form @submit="onSubmit">
         <van-cell-group inset>
           <van-field
-            :value="selectedTypeName"
+            :model-value="selectedTypeName"
             name="eventType"
             label="事件类型"
             placeholder="请选择事件类型"

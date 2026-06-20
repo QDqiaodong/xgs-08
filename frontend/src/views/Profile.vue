@@ -126,20 +126,20 @@
                   <van-tag :type="getLogTypeTag(log.logType)" size="small">{{ getLogTypeName(log.logType) }}</van-tag>
                   <span class="log-date">{{ log.logDate }}</span>
                 </div>
-                <div class="log-highlight" v-if="log.logType === 'fertilize' && log.fertilizer">
+                <div class="log-highlight" v-if="log.logType === 'fertilize'">
                   <van-icon name="balance-o" size="12" />
                   <span class="highlight-label">肥料：</span>
-                  <span class="highlight-value">{{ log.fertilizer }}</span>
+                  <span class="highlight-value">{{ log.fertilizer || '未指定' }}</span>
                 </div>
-                <div class="log-highlight" v-else-if="log.logType === 'prune' && log.position">
+                <div class="log-highlight" v-else-if="log.logType === 'prune'">
                   <van-icon name="scissors-o" size="12" />
                   <span class="highlight-label">部位：</span>
-                  <span class="highlight-value">{{ log.position }}</span>
+                  <span class="highlight-value">{{ log.position || '未指定' }}</span>
                 </div>
-                <div class="log-highlight" v-else-if="log.logType === 'repot' && log.soilType">
+                <div class="log-highlight" v-else-if="log.logType === 'repot'">
                   <van-icon name="exchange" size="12" />
                   <span class="highlight-label">盆土：</span>
-                  <span class="highlight-value">{{ log.soilType }}</span>
+                  <span class="highlight-value">{{ log.soilType || '未指定' }}</span>
                 </div>
                 <div class="log-content" v-if="log.content">{{ log.content }}</div>
               </div>

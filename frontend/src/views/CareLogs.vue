@@ -258,7 +258,7 @@
             </div>
             <van-cell-group inset class="bonsai-cell-group">
               <van-field
-                :value="selectedBonsaiName || '不关联'"
+                :model-value="selectedBonsaiName || '不关联'"
                 is-link
                 readonly
                 :border="false"
@@ -602,6 +602,18 @@ const validateLogDate = () => {
 const submitLog = async () => {
   if (!logForm.content.trim()) {
     showToast('请输入护理要点')
+    return
+  }
+  if (logForm.logType === 'fertilize' && !logForm.fertilizer.trim()) {
+    showToast('请输入肥料')
+    return
+  }
+  if (logForm.logType === 'prune' && !logForm.position.trim()) {
+    showToast('请输入修剪部位')
+    return
+  }
+  if (logForm.logType === 'repot' && !logForm.soilType.trim()) {
+    showToast('请输入盆土')
     return
   }
   if (!validateLogDate()) {
