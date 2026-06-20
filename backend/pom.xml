@@ -16,7 +16,7 @@
     <description>盆景造型养护交流圈</description>
 
     <properties>
-        <java.version>26</java.version>
+        <java.version>17</java.version>
     </properties>
 
     <dependencies>
