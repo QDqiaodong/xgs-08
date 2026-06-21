@@ -1,5 +1,6 @@
 package com.bonsai.controller;
 
+import com.bonsai.dto.BonsaiStatus;
 import com.bonsai.dto.CareSummary;
 import com.bonsai.dto.Result;
 import com.bonsai.dto.UserBonsaiProfile;
@@ -66,6 +67,21 @@ public class BonsaiController {
     @GetMapping("/{id}/care-summary")
     public Result<CareSummary> getCareSummary(@PathVariable Long id) {
         return Result.success(bonsaiService.getCareSummary(id));
+    }
+
+    @GetMapping("/{id}/status")
+    public Result<BonsaiStatus> getBonsaiStatus(@PathVariable Long id) {
+        return Result.success(bonsaiService.getBonsaiStatus(id));
+    }
+
+    @GetMapping("/user/{userId}/statuses")
+    public Result<java.util.Map<Long, BonsaiStatus>> getUserBonsaiStatuses(@PathVariable Long userId) {
+        java.util.List<Bonsai> bonsais = bonsaiService.getUserBonsaiList(userId);
+        java.util.Map<Long, BonsaiStatus> statusMap = new java.util.HashMap<>();
+        for (Bonsai bonsai : bonsais) {
+            statusMap.put(bonsai.getId(), bonsaiService.getBonsaiStatus(bonsai.getId()));
+        }
+        return Result.success(statusMap);
     }
 
     @PostMapping("/validate")

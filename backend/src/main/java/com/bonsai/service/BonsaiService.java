@@ -1,5 +1,7 @@
 package com.bonsai.service;
 
+import com.bonsai.dto.BonsaiStatus;
+import com.bonsai.dto.BonsaiStatus.Status;
 import com.bonsai.dto.CareSummary;
 import com.bonsai.dto.UserBonsaiProfile;
 import com.bonsai.entity.Bonsai;
@@ -348,5 +350,83 @@ public class BonsaiService {
         }
 
         return summary;
+    }
+
+    private static final int WATERING_INTERVAL_DAYS = 3;
+    private static final int PRUNING_INTERVAL_DAYS = 45;
+    private static final int FERTILIZING_INTERVAL_DAYS = 30;
+
+    public BonsaiStatus getBonsaiStatus(Long bonsaiId) {
+        BonsaiStatus status = new BonsaiStatus();
+        LocalDate today = LocalDate.now();
+
+        List<CareLog> lastWater = careLogRepository.findTop1ByBonsaiIdAndLogTypeOrderByLogDateDesc(bonsaiId, "water");
+        List<CareLog> lastPrune = careLogRepository.findTop1ByBonsaiIdAndLogTypeOrderByLogDateDesc(bonsaiId, "prune");
+        List<CareLog> lastFertilize = careLogRepository.findTop1ByBonsaiIdAndLogTypeOrderByLogDateDesc(bonsaiId, "fertilize");
+
+        Integer daysSinceWater = null;
+        Integer daysSincePrune = null;
+        Integer daysSinceFertilize = null;
+
+        if (!lastWater.isEmpty()) {
+            LocalDate waterDate = lastWater.get(0).getLogDate();
+            status.setLastWaterDate(waterDate);
+            daysSinceWater = (int) java.time.temporal.ChronoUnit.DAYS.between(waterDate, today);
+            status.setDaysSinceLastWater(daysSinceWater);
+        }
+
+        if (!lastPrune.isEmpty()) {
+            LocalDate pruneDate = lastPrune.get(0).getLogDate();
+            status.setLastPruneDate(pruneDate);
+            daysSincePrune = (int) java.time.temporal.ChronoUnit.DAYS.between(pruneDate, today);
+            status.setDaysSinceLastPrune(daysSincePrune);
+        }
+
+        if (!lastFertilize.isEmpty()) {
+            LocalDate fertilizeDate = lastFertilize.get(0).getLogDate();
+            status.setLastFertilizeDate(fertilizeDate);
+            daysSinceFertilize = (int) java.time.temporal.ChronoUnit.DAYS.between(fertilizeDate, today);
+            status.setDaysSinceLastFertilize(daysSinceFertilize);
+        }
+
+        if (daysSinceWater == null || daysSinceWater >= WATERING_INTERVAL_DAYS) {
+            status.setStatus(Status.NEED_WATER);
+            status.setStatusLabel("需浇水");
+            status.setStatusIcon("drop");
+            status.setStatusColor("#1989fa");
+            if (daysSinceWater == null) {
+                status.setMessage("尚未记录浇水，建议尽快浇水");
+            } else {
+                status.setMessage("已 " + daysSinceWater + " 天未浇水，建议尽快浇水");
+            }
+            return status;
+        }
+
+        if (daysSincePrune == null || daysSincePrune >= PRUNING_INTERVAL_DAYS) {
+            status.setStatus(Status.NEED_PRUNE);
+            status.setStatusLabel("待修剪");
+            status.setStatusIcon("scissor");
+            status.setStatusColor("#ff976a");
+            if (daysSincePrune == null) {
+                status.setMessage("尚未记录修剪，建议检查是否需要修剪");
+            } else {
+                status.setMessage("已 " + daysSincePrune + " 天未修剪，建议检查是否需要修剪");
+            }
+            return status;
+        }
+
+        status.setStatus(Status.STABLE);
+        status.setStatusLabel("稳定培养中");
+        status.setStatusIcon("like");
+        status.setStatusColor("#07c160");
+        StringBuilder stableMsg = new StringBuilder("养护状态良好");
+        if (daysSinceWater != null) {
+            stableMsg.append("，").append(WATERING_INTERVAL_DAYS - daysSinceWater).append("天后需浇水");
+        }
+        if (daysSinceFertilize != null && daysSinceFertilize >= FERTILIZING_INTERVAL_DAYS - 7) {
+            stableMsg.append("，近期可考虑施肥");
+        }
+        status.setMessage(stableMsg.toString());
+        return status;
     }
 }

@@ -32,6 +32,14 @@ export function getCareSummary(bonsaiId) {
   return request.get(`/bonsais/${bonsaiId}/care-summary`)
 }
 
+export function getBonsaiStatus(bonsaiId) {
+  return request.get(`/bonsais/${bonsaiId}/status`)
+}
+
+export function getUserBonsaiStatuses(userId) {
+  return request.get(`/bonsais/user/${userId}/statuses`)
+}
+
 export function validateBonsai(data) {
   return request.post('/bonsais/validate', data)
 }
