@@ -83,6 +83,44 @@
                 </div>
               </div>
 
+              <div v-if="anomalousBonsais.length > 0" class="anomaly-section card">
+                <div class="anomaly-section-header">
+                  <div class="section-title">
+                    <van-icon name="warning-o" color="#ee0a24" />
+                    <span>养护异常提醒</span>
+                    <span class="anomaly-count">{{ anomalousBonsais.length }}盆</span>
+                  </div>
+                </div>
+                <div class="anomaly-list">
+                  <div
+                    v-for="item in anomalousBonsais"
+                    :key="item.bonsai.id"
+                    class="anomaly-card"
+                    @click="goToBonsaiDetail(item.bonsai.id)"
+                  >
+                    <div class="anomaly-bonsai-info">
+                      <div class="anomaly-bonsai-name">{{ item.bonsai.name }}</div>
+                      <div class="anomaly-items">
+                        <div
+                          v-for="(anomaly, idx) in item.status.anomalies"
+                          :key="idx"
+                          class="anomaly-item"
+                          :style="{ color: getAnomalyColor(anomaly) }"
+                        >
+                          <van-icon :name="getAnomalyIcon(anomaly)" size="12" />
+                          <span>{{ getAnomalyLabel(anomaly) }}</span>
+                        </div>
+                      </div>
+                      <div v-if="item.status.anomalyMessages && item.status.anomalyMessages.length > 0" class="anomaly-message">
+                        <van-icon name="info-o" size="10" />
+                        <span>{{ item.status.anomalyMessages[0] }}</span>
+                      </div>
+                    </div>
+                    <van-icon name="arrow" size="16" class="anomaly-arrow" />
+                  </div>
+                </div>
+              </div>
+
               <div v-if="careLogs.length === 0 && !loading" class="empty-state">
                 <van-icon name="notes-o" class="empty-icon" />
                 <span class="empty-text">暂无养护记录</span>
@@ -545,7 +583,7 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import { getUserCareLogs, createCareLog, getSpeciesCareProfiles } from '@/api/careLog'
-import { getUserBonsaiList } from '@/api/bonsai'
+import { getUserBonsaiList, getUserBonsaiStatuses } from '@/api/bonsai'
 import { getUserWateringReminders } from '@/api/wateringReminder'
 import { useUserStore } from '@/stores/user'
 import { getCareTips, groupLogsBySolarTerm, SEASON_ORDER } from '@/utils/solarTerms'
@@ -570,6 +608,8 @@ const submitting = ref(false)
 const photoFileList = ref([])
 const speciesProfiles = ref([])
 const profilesLoading = ref(false)
+const bonsaiStatuses = ref({})
+const statusesLoading = ref(false)
 
 const logForm = reactive({
   logType: 'water',
@@ -658,6 +698,37 @@ const urgentCount = computed(() => {
     r.status === 'overdue' || r.status === 'urgent' || r.status === 'today'
   ).length
 })
+
+const anomalousBonsais = computed(() => {
+  const result = []
+  bonsaiList.value.forEach(bonsai => {
+    const status = bonsaiStatuses.value[bonsai.id]
+    if (status?.hasAnomaly) {
+      result.push({
+        bonsai,
+        status
+      })
+    }
+  })
+  return result
+})
+
+const ANOMALY_INFO = {
+  LONG_TIME_NO_CARE: { label: '长期无养护记录', icon: 'warning-o', color: '#ff976a' },
+  FREQUENT_FERTILIZING: { label: '短期重复施肥', icon: 'warning', color: '#ee0a24' }
+}
+
+const getAnomalyLabel = (anomalyType) => {
+  return ANOMALY_INFO[anomalyType]?.label || anomalyType
+}
+
+const getAnomalyIcon = (anomalyType) => {
+  return ANOMALY_INFO[anomalyType]?.icon || 'info-o'
+}
+
+const getAnomalyColor = (anomalyType) => {
+  return ANOMALY_INFO[anomalyType]?.color || '#969799'
+}
 
 const getLogTypeName = (type) => {
   const found = logTypes.find(t => t.value === type)
@@ -761,6 +832,17 @@ const loadSpeciesProfiles = async () => {
   }
 }
 
+const loadBonsaiStatuses = async () => {
+  statusesLoading.value = true
+  try {
+    bonsaiStatuses.value = await getUserBonsaiStatuses(userStore.currentUser.id)
+  } catch (e) {
+    console.warn('加载盆景状态失败', e)
+  } finally {
+    statusesLoading.value = false
+  }
+}
+
 const getStatusInfo = (status) => {
   const statusMap = {
     overdue: { text: '已逾期', color: '#ee0a24', bgColor: 'rgba(238, 10, 36, 0.1)', icon: 'warning-o' },
@@ -804,7 +886,8 @@ const quickWater = async (reminder) => {
     showToast('已记录浇水')
     await Promise.all([
       loadLogs(),
-      loadWateringReminders()
+      loadWateringReminders(),
+      loadBonsaiStatuses()
     ])
   } catch (e) {
     showToast('记录失败')
@@ -893,7 +976,8 @@ const submitLog = async () => {
     showToast('记录成功')
     await Promise.all([
       loadLogs(),
-      loadWateringReminders()
+      loadWateringReminders(),
+      loadBonsaiStatuses()
     ])
   } catch (e) {
     showToast(e?.message || '记录失败')
@@ -944,6 +1028,7 @@ onMounted(() => {
   loadBonsaiList()
   loadWateringReminders()
   loadSpeciesProfiles()
+  loadBonsaiStatuses()
 })
 </script>
 
@@ -965,6 +1050,101 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-lg);
+}
+
+.anomaly-section {
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.anomaly-section-header {
+  margin-bottom: var(--spacing-sm);
+}
+
+.anomaly-section .section-title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  padding-left: var(--spacing-sm);
+  border-left: 3px solid #ee0a24;
+}
+
+.anomaly-count {
+  font-size: var(--font-size-xs);
+  color: #ee0a24;
+  background: rgba(238, 10, 36, 0.1);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  margin-left: var(--spacing-xs);
+}
+
+.anomaly-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.anomaly-card {
+  display: flex;
+  align-items: center;
+  padding: var(--spacing-md);
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-md);
+  border-left: 3px solid #ee0a24;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.anomaly-card:active {
+  transform: scale(0.98);
+}
+
+.anomaly-bonsai-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.anomaly-bonsai-name {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-xs);
+}
+
+.anomaly-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-xs);
+}
+
+.anomaly-item {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  padding: 2px 6px;
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-xs);
+}
+
+.anomaly-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  line-height: 1.4;
+}
+
+.anomaly-arrow {
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+  margin-left: var(--spacing-sm);
 }
 
 .type-section {

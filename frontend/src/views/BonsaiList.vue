@@ -68,6 +68,12 @@
               <van-tag v-if="bonsai.species" size="mini" type="primary" plain>{{ bonsai.species.name }}</van-tag>
               <van-tag v-if="getTreeAgeDisplay(bonsai.treeAge)" size="mini" type="success" plain>{{ getTreeAgeDisplay(bonsai.treeAge) }}年</van-tag>
             </div>
+            <div v-if="getTrainingStageInfo(bonsai.trainingStage)" class="training-stage">
+              <span class="stage-icon">{{ getTrainingStageInfo(bonsai.trainingStage).icon }}</span>
+              <span class="stage-label" :style="{ color: getTrainingStageInfo(bonsai.trainingStage).color }">
+                {{ getTrainingStageInfo(bonsai.trainingStage).label }}
+              </span>
+            </div>
             <div v-if="bonsai.acquireDate" class="acquire-date">
               <van-icon name="calendar-o" size="10" />
               <span>{{ formatDate(bonsai.acquireDate) }}</span>
@@ -98,7 +104,7 @@ import { getCoverImage, BONSAI_PLACEHOLDER_SVG } from '@/utils/image'
 import SpeciesCareTip from '@/components/SpeciesCareTip.vue'
 import { getSpeciesCare, getAllSpeciesNames } from '@/utils/speciesCare'
 import { normalizeSpecies, isUnknownSpecies } from '@/utils/speciesNormalizer'
-import { getTreeAgeDisplay } from '@/utils/bonsaiValidator'
+import { getTreeAgeDisplay, getTrainingStageInfo } from '@/utils/bonsaiValidator'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -251,6 +257,26 @@ onMounted(() => {
   gap: var(--spacing-xs);
   margin-bottom: var(--spacing-xs);
   flex-wrap: wrap;
+}
+
+.training-stage {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: var(--spacing-xs);
+  padding: 2px 6px;
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-xs);
+  width: fit-content;
+}
+
+.stage-icon {
+  font-size: 12px;
+}
+
+.stage-label {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
 }
 
 .acquire-date {

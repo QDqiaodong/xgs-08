@@ -29,6 +29,14 @@
             <van-tag v-if="getStyleName(bonsai.style)" type="danger" plain size="small">{{ getStyleName(bonsai.style) }}</van-tag>
             <van-tag v-if="getTreeAgeDisplay(bonsai.treeAge)" type="success" plain size="small">{{ getTreeAgeDisplay(bonsai.treeAge) }}年树龄</van-tag>
             <van-tag v-if="getPotTypeDisplay(bonsai.potType)" type="warning" plain size="small">{{ getPotTypeDisplay(bonsai.potType) }}</van-tag>
+            <van-tag 
+              v-if="getTrainingStageInfo(bonsai.trainingStage)" 
+              size="small"
+              :style="{ borderColor: getTrainingStageInfo(bonsai.trainingStage).color, color: getTrainingStageInfo(bonsai.trainingStage).color }"
+              plain
+            >
+              {{ getTrainingStageInfo(bonsai.trainingStage).icon }} {{ getTrainingStageInfo(bonsai.trainingStage).label }}
+            </van-tag>
           </div>
           <div v-if="bonsai.acquireDate" class="acquire-info">
             <van-icon name="calendar-o" size="14" />
@@ -81,6 +89,38 @@
             </div>
             <div class="outline-label">盆面</div>
             <div class="outline-value">{{ bonsai.potSurface || '暂无记录' }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="getTrainingStageInfo(bonsai.trainingStage)" class="training-stage-section card">
+        <div class="section-title">
+          <van-icon name="flag-o" />
+          <span>造型进度</span>
+        </div>
+        <div class="training-stage-current">
+          <div class="current-stage-badge" :style="{ background: getTrainingStageInfo(bonsai.trainingStage).color + '20', borderColor: getTrainingStageInfo(bonsai.trainingStage).color }">
+            <span class="stage-icon-lg">{{ getTrainingStageInfo(bonsai.trainingStage).icon }}</span>
+            <div class="stage-info">
+              <div class="stage-name" :style="{ color: getTrainingStageInfo(bonsai.trainingStage).color }">
+                {{ getTrainingStageInfo(bonsai.trainingStage).label }}
+              </div>
+              <div class="stage-desc">{{ getTrainingStageInfo(bonsai.trainingStage).description }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="training-progress-bar">
+          <div
+            v-for="(stage, idx) in TRAINING_STAGE_LIST"
+            :key="stage.value"
+            class="progress-step"
+            :class="{ active: isStageActive(stage.value), completed: isStageCompleted(stage.value) }"
+          >
+            <div class="step-circle" :style="isStageActiveOrCompleted(stage.value) ? { background: stage.color, borderColor: stage.color } : {}">
+              <span>{{ stage.icon }}</span>
+            </div>
+            <div class="step-label">{{ stage.label }}</div>
+            <div v-if="idx < TRAINING_STAGE_LIST.length - 1" class="step-line" :class="{ filled: isStageCompleted(stage.value) }" :style="isStageCompleted(stage.value) ? { background: stage.color } : {}"></div>
           </div>
         </div>
       </div>
@@ -400,7 +440,7 @@ import { getCoverImage, parseImages, getImageWithFallback, BONSAI_PLACEHOLDER_SV
 import BeforeAfterCompare from '@/components/BeforeAfterCompare.vue'
 import SpeciesCareTip from '@/components/SpeciesCareTip.vue'
 import { useUserStore } from '@/stores/user'
-import { STAGE_LIST, getStageInfo, getStyleName, getTreeAgeDisplay, getPotTypeDisplay } from '@/utils/bonsaiValidator'
+import { STAGE_LIST, getStageInfo, getStyleName, getTreeAgeDisplay, getPotTypeDisplay, getTrainingStageInfo, TRAINING_STAGE_LIST } from '@/utils/bonsaiValidator'
 
 const router = useRouter()
 const route = useRoute()
@@ -478,6 +518,25 @@ const activeStageNote = computed(() => {
 
 const hasStage = (stageValue) => {
   return stageImagesGrouped.value[stageValue] && stageImagesGrouped.value[stageValue].length > 0
+}
+
+const getCurrentStageIndex = () => {
+  if (!bonsai.value?.trainingStage) return -1
+  return TRAINING_STAGE_LIST.findIndex(s => s.value === bonsai.value.trainingStage)
+}
+
+const isStageActive = (stageValue) => {
+  return bonsai.value?.trainingStage === stageValue
+}
+
+const isStageCompleted = (stageValue) => {
+  const currentIdx = getCurrentStageIndex()
+  const stageIdx = TRAINING_STAGE_LIST.findIndex(s => s.value === stageValue)
+  return stageIdx < currentIdx
+}
+
+const isStageActiveOrCompleted = (stageValue) => {
+  return isStageActive(stageValue) || isStageCompleted(stageValue)
 }
 
 const getStageImage = (img) => {
@@ -1268,6 +1327,128 @@ onMounted(() => {
   .care-summary-grid {
     grid-template-columns: 1fr 1fr;
   }
+}
+
+.training-stage-section {
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
+}
+
+.training-stage-section .section-title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-lg);
+  padding-left: var(--spacing-sm);
+  border-left: 3px solid #7232dd;
+}
+
+.training-stage-current {
+  margin-bottom: var(--spacing-lg);
+}
+
+.current-stage-badge {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  border: 2px solid;
+}
+
+.stage-icon-lg {
+  font-size: 36px;
+  flex-shrink: 0;
+}
+
+.stage-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.stage-name {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: var(--spacing-xs);
+}
+
+.stage-desc {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-base);
+}
+
+.training-progress-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  position: relative;
+}
+
+.progress-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  flex: 1;
+  z-index: 1;
+}
+
+.step-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--color-bg-secondary);
+  border: 2px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  margin-bottom: var(--spacing-xs);
+  transition: all var(--transition-base);
+}
+
+.progress-step.active .step-circle {
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.progress-step.completed .step-circle {
+  color: #fff;
+}
+
+.step-label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.progress-step.active .step-label {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+.progress-step.completed .step-label {
+  color: var(--color-text-secondary);
+}
+
+.step-line {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  width: 100%;
+  height: 2px;
+  background: var(--color-border);
+  z-index: -1;
+  transition: background var(--transition-base);
+}
+
+.step-line.filled {
+  background: var(--color-primary);
 }
 
 .stage-images-section {

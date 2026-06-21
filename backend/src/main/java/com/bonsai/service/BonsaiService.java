@@ -355,6 +355,9 @@ public class BonsaiService {
     private static final int WATERING_INTERVAL_DAYS = 3;
     private static final int PRUNING_INTERVAL_DAYS = 45;
     private static final int FERTILIZING_INTERVAL_DAYS = 30;
+    private static final int LONG_NO_CARE_DAYS_THRESHOLD = 30;
+    private static final int FREQUENT_FERTILIZE_DAYS_THRESHOLD = 7;
+    private static final int FREQUENT_FERTILIZE_COUNT_THRESHOLD = 2;
 
     public BonsaiStatus getBonsaiStatus(Long bonsaiId) {
         BonsaiStatus status = new BonsaiStatus();
@@ -388,6 +391,8 @@ public class BonsaiService {
             daysSinceFertilize = (int) java.time.temporal.ChronoUnit.DAYS.between(fertilizeDate, today);
             status.setDaysSinceLastFertilize(daysSinceFertilize);
         }
+
+        detectAnomalies(bonsaiId, status, today, daysSinceWater, daysSincePrune, daysSinceFertilize);
 
         if (daysSinceWater == null || daysSinceWater >= WATERING_INTERVAL_DAYS) {
             status.setStatus(Status.NEED_WATER);
@@ -428,5 +433,37 @@ public class BonsaiService {
         }
         status.setMessage(stableMsg.toString());
         return status;
+    }
+
+    private void detectAnomalies(Long bonsaiId, BonsaiStatus status, LocalDate today,
+                                  Integer daysSinceWater, Integer daysSincePrune, Integer daysSinceFertilize) {
+        List<CareLog> allCareLogs = careLogRepository.findByBonsaiIdOrderByLogDateDesc(bonsaiId);
+
+        Integer daysSinceLastCare = null;
+        if (!allCareLogs.isEmpty()) {
+            LocalDate lastCareDate = allCareLogs.get(0).getLogDate();
+            daysSinceLastCare = (int) java.time.temporal.ChronoUnit.DAYS.between(lastCareDate, today);
+        }
+
+        if (daysSinceLastCare == null || daysSinceLastCare >= LONG_NO_CARE_DAYS_THRESHOLD) {
+            String message;
+            if (daysSinceLastCare == null) {
+                message = "该盆景尚未记录任何养护操作，建议及时记录养护情况";
+            } else {
+                message = "已 " + daysSinceLastCare + " 天未记录养护，建议检查并更新养护记录";
+            }
+            status.addAnomaly(BonsaiStatus.AnomalyType.LONG_TIME_NO_CARE, message);
+        }
+
+        LocalDate fertilizeThreshold = today.minusDays(FREQUENT_FERTILIZE_DAYS_THRESHOLD);
+        long recentFertilizeCount = allCareLogs.stream()
+                .filter(log -> "fertilize".equals(log.getLogType()))
+                .filter(log -> !log.getLogDate().isBefore(fertilizeThreshold))
+                .count();
+
+        if (recentFertilizeCount >= FREQUENT_FERTILIZE_COUNT_THRESHOLD) {
+            String message = "近 " + FREQUENT_FERTILIZE_DAYS_THRESHOLD + " 天内施肥 " + recentFertilizeCount + " 次，施肥频率过高，建议检查记录是否准确";
+            status.addAnomaly(BonsaiStatus.AnomalyType.FREQUENT_FERTILIZING, message);
+        }
     }
 }

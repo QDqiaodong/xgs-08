@@ -55,6 +55,16 @@
           />
 
           <van-field
+            :model-value="getTrainingStageLabel()"
+            name="trainingStage"
+            label="造型进度"
+            placeholder="请选择造型进度"
+            is-link
+            readonly
+            @click="showTrainingStagePicker = true"
+          />
+
+          <van-field
             v-model="form.acquireDate"
             name="acquireDate"
             label="入手日期"
@@ -235,6 +245,37 @@
         </div>
       </div>
     </van-popup>
+
+    <van-popup v-model:show="showTrainingStagePicker" position="bottom" round :style="{ height: '50%' }">
+      <div class="picker-popup">
+        <div class="picker-popup-header">
+          <van-button type="default" size="small" @click="showTrainingStagePicker = false">取消</van-button>
+          <span class="picker-title">选择造型进度</span>
+          <van-button type="primary" size="small" @click="confirmTrainingStage">确定</van-button>
+        </div>
+        <div class="picker-popup-content">
+          <div class="training-stage-options">
+            <div
+              v-for="stage in TRAINING_STAGE_LIST"
+              :key="stage.value"
+              class="training-stage-option"
+              :class="{ selected: tempTrainingStage === stage.value }"
+              :style="tempTrainingStage === stage.value ? { borderColor: stage.color, background: stage.color + '10' } : {}"
+              @click="tempTrainingStage = stage.value"
+            >
+              <span class="stage-icon">{{ stage.icon }}</span>
+              <div class="stage-info">
+                <div class="stage-name" :style="tempTrainingStage === stage.value ? { color: stage.color } : {}">
+                  {{ stage.label }}
+                </div>
+                <div class="stage-desc">{{ stage.description }}</div>
+              </div>
+              <van-icon v-if="tempTrainingStage === stage.value" name="success" :color="stage.color" size="20" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </van-popup>
   </div>
 </template>
 
@@ -253,7 +294,7 @@ import { getCategoriesByType } from '@/api/category'
 import { useUserStore } from '@/stores/user'
 import { validateImageFile, uploadSingleImage } from '@/api/upload'
 import { getImageWithFallback } from '@/utils/image'
-import { validateBonsai as validateBonsaiData, STAGE_LIST, getStyleName } from '@/utils/bonsaiValidator'
+import { validateBonsai as validateBonsaiData, STAGE_LIST, getStyleName, TRAINING_STAGE_LIST, getTrainingStageInfo } from '@/utils/bonsaiValidator'
 
 const router = useRouter()
 const route = useRoute()
@@ -275,13 +316,15 @@ const form = reactive({
   trunkShape: '',
   branchSupport: '',
   crownWidth: '',
-  potSurface: ''
+  potSurface: '',
+  trainingStage: ''
 })
 
 const fileList = ref([])
 const submitting = ref(false)
 const showSpeciesPicker = ref(false)
 const showStylePicker = ref(false)
+const showTrainingStagePicker = ref(false)
 const speciesList = ref([])
 const styleList = ref([])
 const tempSpeciesId = ref(null)
@@ -290,6 +333,7 @@ const selectedSpeciesName = ref('')
 const tempStyleId = ref(null)
 const tempStyleName = ref('')
 const selectedStyleName = ref('')
+const tempTrainingStage = ref('')
 
 const validationResult = reactive({
   errors: [],
@@ -370,6 +414,19 @@ const confirmStyle = () => {
     selectedStyleName.value = tempStyleName.value
   }
   showStylePicker.value = false
+}
+
+const getTrainingStageLabel = () => {
+  if (!form.trainingStage) return ''
+  const stage = getTrainingStageInfo(form.trainingStage)
+  return stage ? stage.label : ''
+}
+
+const confirmTrainingStage = () => {
+  if (tempTrainingStage.value) {
+    form.trainingStage = tempTrainingStage.value
+  }
+  showTrainingStagePicker.value = false
 }
 
 const beforeRead = (file) => {
@@ -482,6 +539,8 @@ const loadBonsai = async () => {
       form.branchSupport = bonsai.branchSupport || ''
       form.crownWidth = bonsai.crownWidth || ''
       form.potSurface = bonsai.potSurface || ''
+      form.trainingStage = bonsai.trainingStage || ''
+      tempTrainingStage.value = bonsai.trainingStage || ''
 
       if (bonsai.species) {
         selectedSpeciesName.value = bonsai.species.name
@@ -814,5 +873,50 @@ onMounted(async () => {
   background: #e8f3ea !important;
   border-color: #07c160 !important;
   color: #07c160 !important;
+}
+
+.training-stage-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.training-stage-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: #f7f8fa;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.training-stage-option.selected {
+  background: #e8f3ea;
+}
+
+.training-stage-option .stage-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+}
+
+.training-stage-option .stage-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.training-stage-option .stage-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #323233;
+  margin-bottom: 4px;
+}
+
+.training-stage-option .stage-desc {
+  font-size: 12px;
+  color: #969799;
+  line-height: 1.4;
 }
 </style>

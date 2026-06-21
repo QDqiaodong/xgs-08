@@ -82,6 +82,10 @@ public class Bonsai {
     @JoinColumn(name = "style_id", insertable = false, updatable = false)
     private Category style;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "training_stage", length = 30)
+    private TrainingStage trainingStage;
+
     @Min(value = 0, message = "浏览次数不能为负数")
     @Column(name = "view_count")
     private Integer viewCount = 0;

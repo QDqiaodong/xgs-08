@@ -58,6 +58,17 @@ export const STAGE_LIST = [
   { value: 'CURRENT', label: '当前状态', icon: '📸', color: '#409eff', description: '最新养护状态展示' }
 ]
 
+export const TRAINING_STAGE_LIST = [
+  { value: 'MATERIAL_CULTIVATION', label: '素材培养', icon: '🌱', color: '#67c23a', description: '刚入手的素材，正在基础培养阶段' },
+  { value: 'INITIAL_SHAPING', label: '初步定型', icon: '✂️', color: '#e6a23c', description: '已完成初步造型修剪，正在定型中' },
+  { value: 'FINE_BRANCH_TRAINING', label: '细枝培养', icon: '🌿', color: '#409eff', description: '主干已定，正在培养细枝和枝托细节' },
+  { value: 'ORNAMENTAL_PERIOD', label: '观赏期', icon: '🌸', color: '#f56c6c', description: '造型成熟，进入最佳观赏期' }
+]
+
+export function getTrainingStageInfo(stageValue) {
+  return TRAINING_STAGE_LIST.find(s => s.value === stageValue) || null
+}
+
 export function containsAnyKeyword(text, keywords) {
   if (!text) return false
   return keywords.some(keyword => text.includes(keyword))

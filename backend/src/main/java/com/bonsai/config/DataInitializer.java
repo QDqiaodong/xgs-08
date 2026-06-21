@@ -3,6 +3,7 @@ package com.bonsai.config;
 import com.bonsai.entity.Bonsai;
 import com.bonsai.entity.CareLog;
 import com.bonsai.entity.Category;
+import com.bonsai.entity.TrainingStage;
 import com.bonsai.entity.User;
 import com.bonsai.repository.BonsaiRepository;
 import com.bonsai.repository.CareLogRepository;
@@ -76,6 +77,7 @@ public class DataInitializer implements CommandLineRunner {
         bonsai1.setCrownWidth("约45cm");
         bonsai1.setPotSurface("苔藓铺面");
         bonsai1.setViewCount(128);
+        bonsai1.setTrainingStage(TrainingStage.ORNAMENTAL_PERIOD);
         bonsai1 = bonsaiRepository.save(bonsai1);
 
         Bonsai bonsai2 = new Bonsai();
@@ -89,6 +91,7 @@ public class DataInitializer implements CommandLineRunner {
         bonsai2.setTrunkShape("斜干式");
         bonsai2.setBranchSupport("双主干造型");
         bonsai2.setViewCount(256);
+        bonsai2.setTrainingStage(TrainingStage.FINE_BRANCH_TRAINING);
         bonsai2 = bonsaiRepository.save(bonsai2);
 
         CareLog fertilizeLog = new CareLog();
