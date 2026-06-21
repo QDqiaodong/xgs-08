@@ -39,4 +39,15 @@ public class CareLogController {
     public Result<CareLog> createCareLog(@Valid @RequestBody CareLog careLog) {
         return Result.success(careLogService.createCareLog(careLog));
     }
+
+    @PutMapping
+    public Result<CareLog> updateCareLog(@Valid @RequestBody CareLog careLog) {
+        return Result.success(careLogService.updateCareLog(careLog));
+    }
+
+    @DeleteMapping("/{id}")
+    public Result<Void> deleteCareLog(@PathVariable Long id) {
+        careLogService.deleteCareLog(id);
+        return Result.success();
+    }
 }

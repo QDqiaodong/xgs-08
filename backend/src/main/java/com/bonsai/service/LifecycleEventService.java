@@ -38,6 +38,7 @@ public class LifecycleEventService {
         return lifecycleEventRepository.save(event);
     }
 
+    @Transactional
     public LifecycleEvent updateEvent(LifecycleEvent event) {
         validateEventType(event.getEventType());
         LifecycleEvent existingEvent = lifecycleEventRepository.findById(event.getId()).orElse(null);
@@ -45,6 +46,14 @@ public class LifecycleEventService {
             throw new IllegalArgumentException("事件不存在");
         }
         validateBonsaiOwnership(existingEvent.getBonsaiId(), event.getUserId());
+
+        if (event.getImages() != null && !event.getImages().equals(existingEvent.getImages())) {
+            imageUtil.deleteImages(existingEvent.getImages());
+        }
+        if (event.getBeforeImages() != null && !event.getBeforeImages().equals(existingEvent.getBeforeImages())) {
+            imageUtil.deleteImages(existingEvent.getBeforeImages());
+        }
+
         event.setBonsaiId(existingEvent.getBonsaiId());
         return lifecycleEventRepository.save(event);
     }

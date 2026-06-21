@@ -70,6 +70,16 @@ public class RepotRecordService {
 
         validateRepotRecord(record);
 
+        if (record.getImages() != null && !record.getImages().equals(existing.getImages())) {
+            imageUtil.deleteImages(existing.getImages());
+        }
+        if (record.getBeforeRootImages() != null && !record.getBeforeRootImages().equals(existing.getBeforeRootImages())) {
+            imageUtil.deleteImages(existing.getBeforeRootImages());
+        }
+        if (record.getAfterRootImages() != null && !record.getAfterRootImages().equals(existing.getAfterRootImages())) {
+            imageUtil.deleteImages(existing.getAfterRootImages());
+        }
+
         if (record.getRepotDate() != null) {
             existing.setRepotDate(record.getRepotDate());
         }

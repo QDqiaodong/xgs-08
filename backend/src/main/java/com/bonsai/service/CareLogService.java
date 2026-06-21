@@ -4,11 +4,13 @@ import com.bonsai.entity.Bonsai;
 import com.bonsai.entity.CareLog;
 import com.bonsai.repository.BonsaiRepository;
 import com.bonsai.repository.CareLogRepository;
+import com.bonsai.util.ImageUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -26,6 +28,7 @@ public class CareLogService {
 
     private final CareLogRepository careLogRepository;
     private final BonsaiRepository bonsaiRepository;
+    private final ImageUtil imageUtil;
 
     public Page<CareLog> getUserCareLogs(Long userId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
@@ -44,6 +47,63 @@ public class CareLogService {
         validateLogType(careLog.getLogType());
         validateCareLogDate(careLog);
         return careLogRepository.save(careLog);
+    }
+
+    @Transactional
+    public CareLog updateCareLog(CareLog careLog) {
+        if (careLog.getId() == null) {
+            throw new IllegalArgumentException("日志ID不能为空");
+        }
+        CareLog existingLog = careLogRepository.findById(careLog.getId()).orElse(null);
+        if (existingLog == null) {
+            throw new IllegalArgumentException("养护日志不存在");
+        }
+
+        validateLogType(careLog.getLogType());
+        validateCareLogDate(careLog);
+
+        if (careLog.getImages() != null && !careLog.getImages().equals(existingLog.getImages())) {
+            imageUtil.deleteImages(existingLog.getImages());
+        }
+
+        if (careLog.getLogType() != null) {
+            existingLog.setLogType(careLog.getLogType());
+        }
+        if (careLog.getTitle() != null) {
+            existingLog.setTitle(careLog.getTitle());
+        }
+        if (careLog.getContent() != null) {
+            existingLog.setContent(careLog.getContent());
+        }
+        if (careLog.getLogDate() != null) {
+            existingLog.setLogDate(careLog.getLogDate());
+        }
+        if (careLog.getImages() != null) {
+            existingLog.setImages(careLog.getImages());
+        }
+        if (careLog.getFertilizer() != null) {
+            existingLog.setFertilizer(careLog.getFertilizer());
+        }
+        if (careLog.getPosition() != null) {
+            existingLog.setPosition(careLog.getPosition());
+        }
+        if (careLog.getSoilType() != null) {
+            existingLog.setSoilType(careLog.getSoilType());
+        }
+        if (careLog.getBonsaiId() != null) {
+            existingLog.setBonsaiId(careLog.getBonsaiId());
+        }
+
+        return careLogRepository.save(existingLog);
+    }
+
+    @Transactional
+    public void deleteCareLog(Long id) {
+        CareLog log = careLogRepository.findById(id).orElse(null);
+        if (log != null) {
+            imageUtil.deleteImages(log.getImages());
+            careLogRepository.deleteById(id);
+        }
     }
 
     private void validateCareLogDate(CareLog careLog) {

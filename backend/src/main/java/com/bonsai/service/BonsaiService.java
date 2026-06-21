@@ -76,6 +76,17 @@ public class BonsaiService {
         if (validationResult.hasErrors()) {
             throw new IllegalArgumentException(String.join("; ", validationResult.getErrors()));
         }
+
+        Bonsai existingBonsai = bonsaiRepository.findById(bonsai.getId()).orElse(null);
+        if (existingBonsai == null) {
+            throw new IllegalArgumentException("盆景不存在");
+        }
+
+        if (bonsai.getCoverImage() != null 
+                && !bonsai.getCoverImage().equals(existingBonsai.getCoverImage())) {
+            imageUtil.deleteImages(existingBonsai.getCoverImage());
+        }
+
         return bonsaiRepository.save(bonsai);
     }
 
@@ -236,11 +247,19 @@ public class BonsaiService {
         if (existing == null) {
             throw new IllegalArgumentException("图片不存在");
         }
+
+        if (stageImage.getImageUrl() != null && !stageImage.getImageUrl().equals(existing.getImageUrl())) {
+            imageUtil.deleteImages(existing.getImageUrl());
+            existing.setImageUrl(stageImage.getImageUrl());
+        }
         if (stageImage.getNote() != null) {
             existing.setNote(stageImage.getNote());
         }
         if (stageImage.getSortOrder() != null) {
             existing.setSortOrder(stageImage.getSortOrder());
+        }
+        if (stageImage.getStage() != null) {
+            existing.setStage(stageImage.getStage());
         }
         return stageImageRepository.save(existing);
     }

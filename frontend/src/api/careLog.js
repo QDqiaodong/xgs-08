@@ -15,3 +15,11 @@ export function getBonsaiCareLogs(bonsaiId) {
 export function createCareLog(data) {
   return request.post('/care-logs', data)
 }
+
+export function updateCareLog(data) {
+  return request.put('/care-logs', data)
+}
+
+export function deleteCareLog(id) {
+  return request.delete(`/care-logs/${id}`)
+}
