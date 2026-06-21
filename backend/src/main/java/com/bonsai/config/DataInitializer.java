@@ -139,6 +139,71 @@ public class DataInitializer implements CommandLineRunner {
         fertilizeLog2.setLogDate(LocalDate.of(2024, 9, 5));
         fertilizeLog2.setFertilizer("骨粉+磷酸二氢钾");
         careLogRepository.save(fertilizeLog2);
+
+        LocalDate baseDate = LocalDate.of(2024, 1, 1);
+        for (int i = 0; i < 12; i++) {
+            CareLog waterLog1 = new CareLog();
+            waterLog1.setUserId(user.getId());
+            waterLog1.setBonsaiId(bonsai1.getId());
+            waterLog1.setLogType("water");
+            waterLog1.setTitle("日常浇水");
+            waterLog1.setContent("定期浇水，保持盆土湿润。");
+            waterLog1.setLogDate(baseDate.plusDays(i * 7));
+            careLogRepository.save(waterLog1);
+
+            CareLog waterLog2 = new CareLog();
+            waterLog2.setUserId(user.getId());
+            waterLog2.setBonsaiId(bonsai2.getId());
+            waterLog2.setLogType("water");
+            waterLog2.setTitle("日常浇水");
+            waterLog2.setContent("黑松耐旱，控制浇水量。");
+            waterLog2.setLogDate(baseDate.plusDays(i * 10));
+            careLogRepository.save(waterLog2);
+        }
+
+        for (int i = 0; i < 4; i++) {
+            CareLog fertilizeLog1 = new CareLog();
+            fertilizeLog1.setUserId(user.getId());
+            fertilizeLog1.setBonsaiId(bonsai1.getId());
+            fertilizeLog1.setLogType("fertilize");
+            fertilizeLog1.setTitle("定期施肥");
+            fertilizeLog1.setContent("生长季定期施肥，薄肥勤施。");
+            fertilizeLog1.setLogDate(baseDate.plusMonths(i + 1));
+            fertilizeLog1.setFertilizer("有机复合肥");
+            careLogRepository.save(fertilizeLog1);
+
+            CareLog fertilizeLog3 = new CareLog();
+            fertilizeLog3.setUserId(user.getId());
+            fertilizeLog3.setBonsaiId(bonsai2.getId());
+            fertilizeLog3.setLogType("fertilize");
+            fertilizeLog3.setTitle("定期施肥");
+            fertilizeLog3.setContent("黑松需肥较少，适量施肥。");
+            fertilizeLog3.setLogDate(baseDate.plusMonths(i * 2 + 1));
+            fertilizeLog3.setFertilizer("缓释肥");
+            careLogRepository.save(fertilizeLog3);
+        }
+
+        for (int i = 0; i < 3; i++) {
+            CareLog pruneLog1 = new CareLog();
+            pruneLog1.setUserId(user.getId());
+            pruneLog1.setBonsaiId(bonsai1.getId());
+            pruneLog1.setLogType("prune");
+            pruneLog1.setTitle("修剪整形");
+            pruneLog1.setContent("剪除徒长枝，保持树形。");
+            pruneLog1.setLogDate(baseDate.plusMonths(i * 3 + 1));
+            pruneLog1.setPosition("侧枝及顶芽");
+            careLogRepository.save(pruneLog1);
+
+            CareLog pruneLog2 = new CareLog();
+            pruneLog2.setUserId(user.getId());
+            pruneLog2.setBonsaiId(bonsai2.getId());
+            pruneLog2.setLogType("prune");
+            pruneLog2.setTitle("修剪造型");
+            pruneLog2.setContent("黑松造型修剪，调整枝托。");
+            pruneLog2.setLogDate(baseDate.plusMonths(i * 4 + 2));
+            pruneLog2.setPosition("顶枝及侧枝");
+            careLogRepository.save(pruneLog2);
+        }
     }
 
     private void initCategories() {

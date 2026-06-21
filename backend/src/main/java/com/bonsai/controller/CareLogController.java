@@ -1,6 +1,7 @@
 package com.bonsai.controller;
 
 import com.bonsai.dto.Result;
+import com.bonsai.dto.SpeciesCareProfile;
 import com.bonsai.entity.CareLog;
 import com.bonsai.service.CareLogService;
 import jakarta.validation.Valid;
@@ -23,6 +24,11 @@ public class CareLogController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         return Result.success(careLogService.getUserCareLogs(userId, page, size));
+    }
+
+    @GetMapping("/user/{userId}/species-profiles")
+    public Result<List<SpeciesCareProfile>> getSpeciesCareProfiles(@PathVariable Long userId) {
+        return Result.success(careLogService.getSpeciesCareProfiles(userId));
     }
 
     @GetMapping("/post/{postId}")

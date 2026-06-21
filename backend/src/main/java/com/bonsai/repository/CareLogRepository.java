@@ -16,4 +16,5 @@ public interface CareLogRepository extends JpaRepository<CareLog, Long> {
     List<CareLog> findByBonsaiIdOrderByLogDateDesc(Long bonsaiId);
     List<CareLog> findByBonsaiIdAndLogTypeOrderByLogDateDesc(Long bonsaiId, String logType);
     List<CareLog> findTop1ByBonsaiIdAndLogTypeOrderByLogDateDesc(Long bonsaiId, String logType);
+    List<CareLog> findByUserIdAndBonsaiIdIsNotNullOrderByLogDateAsc(Long userId);
 }

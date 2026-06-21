@@ -191,6 +191,94 @@
               </div>
             </div>
           </van-tab>
+          <van-tab title="养护画像">
+            <div class="species-profiles-section">
+              <div v-if="profilesLoading" class="loading-wrapper">
+                <van-loading size="24px">加载中...</van-loading>
+              </div>
+              <div v-else-if="speciesProfiles.length === 0" class="empty-state">
+                <van-icon name="chart-trending-o" class="empty-icon" />
+                <span class="empty-text">暂无养护画像数据</span>
+                <span class="empty-desc">记录关联盆景的养护日志后，将为你生成养护频率画像</span>
+              </div>
+              <div v-else class="profiles-container">
+                <div class="profiles-header">
+                  <div class="header-title">
+                    <van-icon name="chart-trending-o" size="18" color="#1989fa" />
+                    <span>树种养护节奏</span>
+                  </div>
+                  <div class="header-legend">
+                    <span class="legend-item">
+                      <span class="legend-dot water-dot"></span>浇水
+                    </span>
+                    <span class="legend-item">
+                      <span class="legend-dot fertilize-dot"></span>施肥
+                    </span>
+                    <span class="legend-item">
+                      <span class="legend-dot prune-dot"></span>修剪
+                    </span>
+                  </div>
+                </div>
+                <div v-for="profile in speciesProfiles" :key="profile.speciesId" class="profile-card card">
+                  <div class="profile-header">
+                    <div class="species-info">
+                      <span class="species-icon">{{ profile.speciesIcon || '🌿' }}</span>
+                      <div class="species-meta">
+                        <h4 class="species-name">{{ profile.speciesName }}</h4>
+                        <span class="species-count">{{ profile.bonsaiCount }}盆盆景</span>
+                      </div>
+                    </div>
+                    <div class="profile-stats-mini">
+                      <span class="mini-stat water">
+                        <van-icon name="down" size="12" />
+                        {{ profile.waterCount }}
+                      </span>
+                      <span class="mini-stat fertilize">
+                        <van-icon name="balance-o" size="12" />
+                        {{ profile.fertilizeCount }}
+                      </span>
+                      <span class="mini-stat prune">
+                        <van-icon name="scissors-o" size="12" />
+                        {{ profile.pruneCount }}
+                      </span>
+                    </div>
+                  </div>
+                  <div class="interval-chart">
+                    <div class="chart-row">
+                      <span class="chart-label">浇水间隔</span>
+                      <div class="chart-bar-container">
+                        <div 
+                          class="chart-bar water-bar" 
+                          :style="{ width: profile.avgWaterInterval ? (profile.avgWaterInterval / getMaxInterval() * 100) + '%' : '0%' }"
+                        ></div>
+                      </div>
+                      <span class="chart-value">{{ formatInterval(profile.avgWaterInterval) }}</span>
+                    </div>
+                    <div class="chart-row">
+                      <span class="chart-label">施肥间隔</span>
+                      <div class="chart-bar-container">
+                        <div 
+                          class="chart-bar fertilize-bar" 
+                          :style="{ width: profile.avgFertilizeInterval ? (profile.avgFertilizeInterval / getMaxInterval() * 100) + '%' : '0%' }"
+                        ></div>
+                      </div>
+                      <span class="chart-value">{{ formatInterval(profile.avgFertilizeInterval) }}</span>
+                    </div>
+                    <div class="chart-row">
+                      <span class="chart-label">修剪间隔</span>
+                      <div class="chart-bar-container">
+                        <div 
+                          class="chart-bar prune-bar" 
+                          :style="{ width: profile.avgPruneInterval ? (profile.avgPruneInterval / getMaxInterval() * 100) + '%' : '0%' }"
+                        ></div>
+                      </div>
+                      <span class="chart-value">{{ formatInterval(profile.avgPruneInterval) }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </van-tab>
           <van-tab title="节气视图">
             <div class="solar-term-view">
               <div v-if="loading" class="loading-wrapper">
@@ -456,7 +544,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
-import { getUserCareLogs, createCareLog } from '@/api/careLog'
+import { getUserCareLogs, createCareLog, getSpeciesCareProfiles } from '@/api/careLog'
 import { getUserBonsaiList } from '@/api/bonsai'
 import { getUserWateringReminders } from '@/api/wateringReminder'
 import { useUserStore } from '@/stores/user'
@@ -480,6 +568,8 @@ const selectedSeason = ref('all')
 const bonsaiList = ref([])
 const submitting = ref(false)
 const photoFileList = ref([])
+const speciesProfiles = ref([])
+const profilesLoading = ref(false)
 
 const logForm = reactive({
   logType: 'water',
@@ -660,6 +750,17 @@ const loadWateringReminders = async () => {
   }
 }
 
+const loadSpeciesProfiles = async () => {
+  profilesLoading.value = true
+  try {
+    speciesProfiles.value = await getSpeciesCareProfiles(userStore.currentUser.id)
+  } catch (e) {
+    console.warn('加载养护频率画像失败', e)
+  } finally {
+    profilesLoading.value = false
+  }
+}
+
 const getStatusInfo = (status) => {
   const statusMap = {
     overdue: { text: '已逾期', color: '#ee0a24', bgColor: 'rgba(238, 10, 36, 0.1)', icon: 'warning-o' },
@@ -823,10 +924,26 @@ const resetLogForm = () => {
   photoFileList.value = []
 }
 
+const getMaxInterval = () => {
+  let max = 0
+  speciesProfiles.value.forEach(p => {
+    if (p.avgWaterInterval && p.avgWaterInterval > max) max = p.avgWaterInterval
+    if (p.avgFertilizeInterval && p.avgFertilizeInterval > max) max = p.avgFertilizeInterval
+    if (p.avgPruneInterval && p.avgPruneInterval > max) max = p.avgPruneInterval
+  })
+  return max || 30
+}
+
+const formatInterval = (days) => {
+  if (days === null || days === undefined) return '暂无数据'
+  return `${Math.round(days)}天`
+}
+
 onMounted(() => {
   loadLogs()
   loadBonsaiList()
   loadWateringReminders()
+  loadSpeciesProfiles()
 })
 </script>
 
@@ -1094,6 +1211,217 @@ onMounted(() => {
 
 .stat-item.other .stat-value {
   color: #969799;
+}
+
+.species-profiles-section {
+  padding: var(--spacing-md) 0;
+}
+
+.species-profiles-section .empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-3xl) var(--spacing-md);
+  text-align: center;
+}
+
+.species-profiles-section .empty-icon {
+  font-size: 48px;
+  color: var(--color-text-tertiary);
+  margin-bottom: var(--spacing-sm);
+  opacity: 0.5;
+}
+
+.species-profiles-section .empty-text {
+  font-size: var(--font-size-md);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-xs);
+}
+
+.species-profiles-section .empty-desc {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+}
+
+.profiles-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.profiles-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 var(--spacing-sm);
+  margin-bottom: var(--spacing-xs);
+}
+
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.header-legend {
+  display: flex;
+  gap: var(--spacing-md);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.water-dot {
+  background: #1989fa;
+}
+
+.fertilize-dot {
+  background: #07c160;
+}
+
+.prune-dot {
+  background: #ff976a;
+}
+
+.profile-card {
+  padding: var(--spacing-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.profile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.species-info {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.species-icon {
+  font-size: 32px;
+  line-height: 1;
+}
+
+.species-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.species-name {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.species-count {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+.profile-stats-mini {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.mini-stat {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: var(--font-size-xs);
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+.mini-stat.water {
+  background: rgba(25, 137, 250, 0.1);
+  color: #1989fa;
+}
+
+.mini-stat.fertilize {
+  background: rgba(7, 193, 96, 0.1);
+  color: #07c160;
+}
+
+.mini-stat.prune {
+  background: rgba(255, 151, 106, 0.1);
+  color: #ff976a;
+}
+
+.interval-chart {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.chart-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.chart-label {
+  width: 60px;
+  flex-shrink: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.chart-bar-container {
+  flex: 1;
+  height: 8px;
+  background: var(--color-bg-secondary);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.chart-bar {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.water-bar {
+  background: linear-gradient(90deg, #1989fa 0%, #4169E1 100%);
+}
+
+.fertilize-bar {
+  background: linear-gradient(90deg, #07c160 0%, #00a86b 100%);
+}
+
+.prune-bar {
+  background: linear-gradient(90deg, #ff976a 0%, #f56c6c 100%);
+}
+
+.chart-value {
+  width: 60px;
+  flex-shrink: 0;
+  text-align: right;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
 }
 
 .solar-term-view {

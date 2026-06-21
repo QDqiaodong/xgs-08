@@ -23,3 +23,7 @@ export function updateCareLog(data) {
 export function deleteCareLog(id) {
   return request.delete(`/care-logs/${id}`)
 }
+
+export function getSpeciesCareProfiles(userId) {
+  return request.get(`/care-logs/user/${userId}/species-profiles`)
+}
