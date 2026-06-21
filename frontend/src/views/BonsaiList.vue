@@ -66,7 +66,7 @@
             <div class="bonsai-name text-ellipsis">{{ bonsai.name }}</div>
             <div class="bonsai-meta">
               <van-tag v-if="bonsai.species" size="mini" type="primary" plain>{{ bonsai.species.name }}</van-tag>
-              <van-tag v-if="bonsai.treeAge" size="mini" type="success" plain>{{ bonsai.treeAge }}年</van-tag>
+              <van-tag v-if="getTreeAgeDisplay(bonsai.treeAge)" size="mini" type="success" plain>{{ getTreeAgeDisplay(bonsai.treeAge) }}年</van-tag>
             </div>
             <div v-if="bonsai.acquireDate" class="acquire-date">
               <van-icon name="calendar-o" size="10" />
@@ -98,6 +98,7 @@ import { getCoverImage, BONSAI_PLACEHOLDER_SVG } from '@/utils/image'
 import SpeciesCareTip from '@/components/SpeciesCareTip.vue'
 import { getSpeciesCare, getAllSpeciesNames } from '@/utils/speciesCare'
 import { normalizeSpecies, isUnknownSpecies } from '@/utils/speciesNormalizer'
+import { getTreeAgeDisplay } from '@/utils/bonsaiValidator'
 
 const router = useRouter()
 const userStore = useUserStore()

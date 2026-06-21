@@ -216,3 +216,40 @@ export function getStageInfo(stageValue) {
     description: ''
   }
 }
+
+export function getStyleName(style) {
+  if (!style) return ''
+  if (typeof style === 'string') return style
+  if (typeof style === 'object') {
+    return style.name || style.label || style.title || style.value || ''
+  }
+  return ''
+}
+
+export function getTreeAgeDisplay(treeAge) {
+  if (treeAge === null || treeAge === undefined || treeAge === '') return ''
+  const age = parseInt(treeAge)
+  if (isNaN(age) || age <= 0) return ''
+  return age.toString()
+}
+
+export function getPotTypeDisplay(potType) {
+  if (!potType) return ''
+  if (typeof potType === 'string') {
+    return potType.trim()
+  }
+  if (typeof potType === 'object') {
+    return potType.name || potType.label || potType.type || ''
+  }
+  return ''
+}
+
+export function normalizeBonsaiDisplayFields(bonsai) {
+  if (!bonsai) return null
+  return {
+    ...bonsai,
+    styleName: getStyleName(bonsai.style),
+    treeAgeDisplay: getTreeAgeDisplay(bonsai.treeAge),
+    potTypeDisplay: getPotTypeDisplay(bonsai.potType)
+  }
+}

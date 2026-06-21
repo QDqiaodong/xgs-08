@@ -26,9 +26,9 @@
           <h2 class="bonsai-name">{{ bonsai.name }}</h2>
           <div class="bonsai-tags">
             <van-tag v-if="bonsai.species" type="primary" plain size="small">{{ bonsai.species.name }}</van-tag>
-            <van-tag v-if="bonsai.style" type="danger" plain size="small">{{ bonsai.style.name }}</van-tag>
-            <van-tag v-if="bonsai.treeAge" type="success" plain size="small">{{ bonsai.treeAge }}年树龄</van-tag>
-            <van-tag v-if="bonsai.potType" type="warning" plain size="small">{{ bonsai.potType }}</van-tag>
+            <van-tag v-if="getStyleName(bonsai.style)" type="danger" plain size="small">{{ getStyleName(bonsai.style) }}</van-tag>
+            <van-tag v-if="getTreeAgeDisplay(bonsai.treeAge)" type="success" plain size="small">{{ getTreeAgeDisplay(bonsai.treeAge) }}年树龄</van-tag>
+            <van-tag v-if="getPotTypeDisplay(bonsai.potType)" type="warning" plain size="small">{{ getPotTypeDisplay(bonsai.potType) }}</van-tag>
           </div>
           <div v-if="bonsai.acquireDate" class="acquire-info">
             <van-icon name="calendar-o" size="14" />
@@ -400,7 +400,7 @@ import { getCoverImage, parseImages, getImageWithFallback, BONSAI_PLACEHOLDER_SV
 import BeforeAfterCompare from '@/components/BeforeAfterCompare.vue'
 import SpeciesCareTip from '@/components/SpeciesCareTip.vue'
 import { useUserStore } from '@/stores/user'
-import { STAGE_LIST, getStageInfo } from '@/utils/bonsaiValidator'
+import { STAGE_LIST, getStageInfo, getStyleName, getTreeAgeDisplay, getPotTypeDisplay } from '@/utils/bonsaiValidator'
 
 const router = useRouter()
 const route = useRoute()

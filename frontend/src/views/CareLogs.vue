@@ -58,7 +58,7 @@
                       </div>
                       <div class="reminder-meta">
                         <span v-if="reminder.speciesName" class="meta-item">{{ reminder.speciesName }}</span>
-                        <span v-if="reminder.potType" class="meta-item">{{ reminder.potType }}</span>
+                        <span v-if="getPotTypeDisplay(reminder.potType)" class="meta-item">{{ getPotTypeDisplay(reminder.potType) }}</span>
                       </div>
                       <div class="reminder-dates">
                         <div class="date-item">
@@ -462,6 +462,7 @@ import { getUserWateringReminders } from '@/api/wateringReminder'
 import { useUserStore } from '@/stores/user'
 import { getCareTips, groupLogsBySolarTerm, SEASON_ORDER } from '@/utils/solarTerms'
 import { validateImageFile, uploadSingleImage } from '@/api/upload'
+import { getPotTypeDisplay } from '@/utils/bonsaiValidator'
 
 const userStore = useUserStore()
 const router = useRouter()

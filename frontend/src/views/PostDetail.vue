@@ -32,9 +32,9 @@
 
         <div v-if="hasPostMeta()" class="post-meta">
           <van-tag v-if="post.species" type="primary" plain size="small">{{ post.species.name }}</van-tag>
-          <van-tag v-if="post.style" type="success" plain size="small">{{ post.style.name }}</van-tag>
-          <van-tag v-if="post.treeAge" type="warning" plain size="small">{{ post.treeAge }}年树龄</van-tag>
-          <van-tag v-if="post.potType" type="default" plain size="small">{{ post.potType }}</van-tag>
+          <van-tag v-if="getStyleName(post.style)" type="success" plain size="small">{{ getStyleName(post.style) }}</van-tag>
+          <van-tag v-if="getTreeAgeDisplay(post.treeAge)" type="warning" plain size="small">{{ getTreeAgeDisplay(post.treeAge) }}年树龄</van-tag>
+          <van-tag v-if="getPotTypeDisplay(post.potType)" type="default" plain size="small">{{ getPotTypeDisplay(post.potType) }}</van-tag>
         </div>
 
         <div class="post-section" v-if="post.content">
@@ -183,6 +183,7 @@ import { getPostComments, createComment } from '@/api/comment'
 import { checkLiked, toggleLike as toggleLikeApi } from '@/api/like'
 import { useUserStore } from '@/stores/user'
 import { parseImages, getImageWithFallback, PLACEHOLDER_SVG, parseImageUrl } from '@/utils/image'
+import { getStyleName, getTreeAgeDisplay, getPotTypeDisplay } from '@/utils/bonsaiValidator'
 
 const route = useRoute()
 const router = useRouter()
@@ -235,7 +236,11 @@ const getLogTypeTag = (type) => {
 }
 
 const hasPostMeta = () => {
-  return post.value && (post.value.species || post.value.style || post.value.treeAge || post.value.potType)
+  if (!post.value) return false
+  return !!(post.value.species || 
+           getStyleName(post.value.style) || 
+           getTreeAgeDisplay(post.value.treeAge) || 
+           getPotTypeDisplay(post.value.potType))
 }
 
 const hasShapingIdeas = () => {

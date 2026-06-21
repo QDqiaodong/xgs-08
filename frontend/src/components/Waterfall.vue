@@ -24,22 +24,22 @@
               <van-icon name="flower-o" size="12" />
               <span class="species-name">{{ post.species.name }}</span>
             </div>
-            <div v-if="post.treeAge" class="cover-tree-age">
+            <div v-if="getTreeAgeDisplay(post.treeAge)" class="cover-tree-age">
               <van-icon name="clock-o" size="12" />
-              <span>{{ post.treeAge }}年</span>
+              <span>{{ getTreeAgeDisplay(post.treeAge) }}年</span>
             </div>
           </div>
         </div>
         <div class="post-content">
           <h3 class="post-title text-ellipsis-2">{{ post.title }}</h3>
           <div class="post-tags" v-if="hasPostTags(post)">
-            <div v-if="post.style" class="post-tag tag-style">
+            <div v-if="getStyleName(post.style)" class="post-tag tag-style">
               <van-icon name="star-o" size="10" />
-              <span>{{ post.style.name }}</span>
+              <span>{{ getStyleName(post.style) }}</span>
             </div>
-            <div v-if="post.potType" class="post-tag tag-pot">
+            <div v-if="getPotTypeDisplay(post.potType)" class="post-tag tag-pot">
               <van-icon name="balance-o" size="10" />
-              <span class="text-ellipsis">{{ post.potType }}</span>
+              <span class="text-ellipsis">{{ getPotTypeDisplay(post.potType) }}</span>
             </div>
           </div>
           <div class="post-footer">
@@ -73,6 +73,7 @@
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { getCoverImage } from '@/utils/image'
+import { getStyleName, getTreeAgeDisplay, getPotTypeDisplay } from '@/utils/bonsaiValidator'
 
 const props = defineProps({
   posts: {
@@ -123,7 +124,7 @@ const formatCount = (count) => {
 }
 
 const hasPostTags = (post) => {
-  return post && (post.style || post.potType)
+  return post && (getStyleName(post.style) || getPotTypeDisplay(post.potType))
 }
 
 const onImageLoad = (postId, event) => {

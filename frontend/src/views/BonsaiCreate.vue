@@ -253,7 +253,7 @@ import { getCategoriesByType } from '@/api/category'
 import { useUserStore } from '@/stores/user'
 import { validateImageFile, uploadSingleImage } from '@/api/upload'
 import { getImageWithFallback } from '@/utils/image'
-import { validateBonsai as validateBonsaiData, STAGE_LIST } from '@/utils/bonsaiValidator'
+import { validateBonsai as validateBonsaiData, STAGE_LIST, getStyleName } from '@/utils/bonsaiValidator'
 
 const router = useRouter()
 const route = useRoute()
@@ -489,10 +489,10 @@ const loadBonsai = async () => {
         tempSpeciesName.value = bonsai.species.name
       }
 
-      if (bonsai.style) {
-        selectedStyleName.value = bonsai.style.name
+      if (getStyleName(bonsai.style)) {
+        selectedStyleName.value = getStyleName(bonsai.style)
         tempStyleId.value = bonsai.styleId
-        tempStyleName.value = bonsai.style.name
+        tempStyleName.value = getStyleName(bonsai.style)
       }
 
       if (bonsai.coverImage) {
